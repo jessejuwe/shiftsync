@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
+  broadcastAssignmentConflict,
+  broadcastShiftAssigned,
+} from "@/lib/pusher-events";
+import {
   validateShiftAssignment,
   type PolicyShift,
   type PolicyAssignment,
@@ -250,6 +254,23 @@ export async function POST(request: NextRequest) {
       });
 
       if (!validation.valid) {
+        const conflictBlock = validation.blocks[0];
+        const conflictType =
+          conflictBlock?.code === "DOUBLE_BOOKING"
+            ? "double-booking"
+            : conflictBlock?.code === "REST_VIOLATION"
+              ? "rest-period"
+              : conflictBlock?.code === "WEEKLY_HOURS_EXCEEDED" ||
+                  conflictBlock?.code === "DAILY_HOURS_EXCEEDED"
+                ? "overtime"
+                : "double-booking";
+        await broadcastAssignmentConflict(userId, {
+          shiftId,
+          userId,
+          conflictType,
+          message: conflictBlock?.message,
+        });
+
         return {
           success: false as const,
           error: {
@@ -281,6 +302,12 @@ export async function POST(request: NextRequest) {
           body: `You have been assigned to a shift.`,
           data: { shiftId, assignmentId: assignment.id },
         },
+      });
+
+      // 8. Broadcast shift assigned (fire-and-forget, outside tx)
+      void broadcastShiftAssigned(userId, shift.locationId, {
+        assignmentId: assignment.id,
+        shiftId,
       });
 
       return {

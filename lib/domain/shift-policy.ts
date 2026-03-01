@@ -9,8 +9,19 @@
 
 export type ValidationSeverity = "warning" | "block";
 
+export type ValidationCode =
+  | "DOUBLE_BOOKING"
+  | "REST_VIOLATION"
+  | "SKILL_MISMATCH"
+  | "CERTIFICATION_REQUIRED"
+  | "AVAILABILITY_VIOLATION"
+  | "DAILY_HOURS_EXCEEDED"
+  | "WEEKLY_HOURS_EXCEEDED"
+  | "CONSECUTIVE_DAYS_EXCEEDED";
+
 export interface ValidationResult {
   type: ValidationSeverity;
+  code: ValidationCode;
   message: string;
   suggestions?: PolicyUser[];
 }
@@ -58,14 +69,18 @@ export interface PolicyAvailabilityWindow extends TimeRange {
 
 export interface ShiftPolicyConfig {
   minRestHours: number;
+  maxDailyHours: number;
   overtimeWarningHoursPerWeek: number;
   overtimeBlockHoursPerWeek: number;
+  maxConsecutiveDays: number;
 }
 
 const DEFAULT_CONFIG: ShiftPolicyConfig = {
-  minRestHours: 11,
+  minRestHours: 10,
+  maxDailyHours: 12,
   overtimeWarningHoursPerWeek: 40,
   overtimeBlockHoursPerWeek: 48,
+  maxConsecutiveDays: 6,
 };
 
 // =============================================================================
@@ -109,6 +124,7 @@ export function checkDoubleBooking(
 
   return {
     type: "block",
+    code: "DOUBLE_BOOKING",
     message: `User is already assigned to ${conflicting.length} overlapping shift(s).`,
   };
 }
@@ -136,6 +152,7 @@ export function checkRestPeriod(
 
   return {
     type: "warning",
+    code: "REST_VIOLATION",
     message: `Less than ${minRestHours}h rest between shifts. May violate labor regulations.`,
   };
 }
@@ -158,6 +175,7 @@ export function checkSkillMatch(
 
   return {
     type: "block",
+    code: "SKILL_MISMATCH",
     message: `User is missing ${missing.length} required skill(s) for this shift.`,
     suggestions: qualified.map((u) => ({ id: u.id, name: u.name, email: u.email })),
   };
@@ -183,6 +201,7 @@ export function checkLocationCertification(
 
   return {
     type: "block",
+    code: "CERTIFICATION_REQUIRED",
     message: "User has no valid certification for this location.",
     suggestions: qualified.map((u) => ({ id: u.id, name: u.name, email: u.email })),
   };
@@ -241,6 +260,7 @@ export function checkAvailability(
 
   return {
     type: "warning",
+    code: "AVAILABILITY_VIOLATION",
     message: "Shift falls outside user's declared availability.",
     suggestions: qualified.map((u) => ({ id: u.id, name: u.name, email: u.email })),
   };
@@ -270,6 +290,7 @@ export function checkOvertimeWarnings(
   if (totalHours >= overtimeBlockHoursPerWeek) {
     return {
       type: "block",
+      code: "WEEKLY_HOURS_EXCEEDED",
       message: `Assignment would exceed ${overtimeBlockHoursPerWeek}h/week (${totalHours.toFixed(1)}h).`,
       suggestions: alternativeUsers,
     };
@@ -278,7 +299,137 @@ export function checkOvertimeWarnings(
   if (totalHours >= overtimeWarningHoursPerWeek) {
     return {
       type: "warning",
+      code: "WEEKLY_HOURS_EXCEEDED",
       message: `Assignment would exceed ${overtimeWarningHoursPerWeek}h/week (${totalHours.toFixed(1)}h). Overtime may apply.`,
+      suggestions: alternativeUsers,
+    };
+  }
+
+  return null;
+}
+
+// =============================================================================
+// ADDITIONAL VALIDATION FUNCTIONS
+// =============================================================================
+
+function toDateKey(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Check if assigning would exceed max hours in a single day.
+ */
+export function checkDailyHoursLimit(
+  shift: PolicyShift,
+  userAssignments: PolicyAssignment[],
+  config: Partial<ShiftPolicyConfig> = {},
+  excludeAssignmentId?: string,
+  alternativeUsers?: PolicyUser[]
+): ValidationResult | null {
+  const { maxDailyHours } = { ...DEFAULT_CONFIG, ...config };
+
+  const shiftDateKey = toDateKey(shift.startsAt);
+  const assignmentsOnSameDay = userAssignments.filter(
+    (a) =>
+      a.id !== excludeAssignmentId &&
+      toDateKey(a.startsAt) === shiftDateKey
+  );
+
+  const existingHours = assignmentsOnSameDay.reduce(
+    (sum, a) => sum + hoursInRange({ startsAt: a.startsAt, endsAt: a.endsAt }),
+    0
+  );
+  const shiftHours = hoursInRange({ startsAt: shift.startsAt, endsAt: shift.endsAt });
+  const totalDailyHours = existingHours + shiftHours;
+
+  if (totalDailyHours > maxDailyHours) {
+    return {
+      type: "block",
+      code: "DAILY_HOURS_EXCEEDED",
+      message: `Assignment would exceed ${maxDailyHours}h/day (${totalDailyHours.toFixed(1)}h on ${shiftDateKey}).`,
+      suggestions: alternativeUsers,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Check weekly hours projection (warning at 40h, block at 48h).
+ * Alias for checkOvertimeWarnings with consistent naming.
+ */
+export function checkWeeklyHoursProjection(
+  shift: PolicyShift,
+  userAssignmentsInWeek: PolicyAssignment[],
+  config: Partial<ShiftPolicyConfig> = {},
+  alternativeUsers?: PolicyUser[]
+): ValidationResult | null {
+  return checkOvertimeWarnings(
+    shift,
+    userAssignmentsInWeek,
+    config,
+    alternativeUsers
+  );
+}
+
+/**
+ * Check if assigning would exceed max consecutive working days.
+ */
+export function checkConsecutiveDays(
+  shift: PolicyShift,
+  userAssignments: PolicyAssignment[],
+  config: Partial<ShiftPolicyConfig> = {},
+  excludeAssignmentId?: string,
+  alternativeUsers?: PolicyUser[]
+): ValidationResult | null {
+  const { maxConsecutiveDays } = { ...DEFAULT_CONFIG, ...config };
+
+  const allAssignments = [
+    ...userAssignments.filter((a) => a.id !== excludeAssignmentId),
+    {
+      id: "proposed",
+      shiftId: shift.id,
+      userId: "",
+      startsAt: shift.startsAt,
+      endsAt: shift.endsAt,
+    } as PolicyAssignment,
+  ];
+
+  const dateKeys = new Set<string>();
+  for (const a of allAssignments) {
+    dateKeys.add(toDateKey(a.startsAt));
+  }
+  const sortedDates = Array.from(dateKeys).sort();
+
+  let maxConsecutive = 0;
+  let current = 0;
+  let prevDate: string | null = null;
+
+  for (const d of sortedDates) {
+    if (prevDate === null) {
+      current = 1;
+    } else {
+      const prev = new Date(prevDate);
+      const curr = new Date(d);
+      const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays === 1) {
+        current += 1;
+      } else {
+        current = 1;
+      }
+    }
+    maxConsecutive = Math.max(maxConsecutive, current);
+    prevDate = d;
+  }
+
+  if (maxConsecutive > maxConsecutiveDays) {
+    return {
+      type: "block",
+      code: "CONSECUTIVE_DAYS_EXCEEDED",
+      message: `Assignment would exceed ${maxConsecutiveDays} consecutive working days (${maxConsecutive} days).`,
       suggestions: alternativeUsers,
     };
   }
@@ -368,18 +519,38 @@ export function validateShiftAssignment(
   );
   if (availability) warnings.push(availability);
 
-  const overtime = checkOvertimeWarnings(
+  const alternativeUsers = allUsersWithAvailability
+    .filter((u) => u.hasAvailability)
+    .map((u) => ({ id: u.id, name: u.name, email: u.email }));
+
+  const dailyHours = checkDailyHoursLimit(
+    shift,
+    userAssignments,
+    config,
+    excludeAssignmentId,
+    alternativeUsers
+  );
+  if (dailyHours) blocks.push(dailyHours);
+
+  const weeklyHours = checkWeeklyHoursProjection(
     shift,
     userAssignmentsInWeek,
     config,
-    allUsersWithAvailability
-      .filter((u) => u.hasAvailability)
-      .map((u) => ({ id: u.id, name: u.name, email: u.email }))
+    alternativeUsers
   );
-  if (overtime) {
-    if (overtime.type === "block") blocks.push(overtime);
-    else warnings.push(overtime);
+  if (weeklyHours) {
+    if (weeklyHours.type === "block") blocks.push(weeklyHours);
+    else warnings.push(weeklyHours);
   }
+
+  const consecutiveDays = checkConsecutiveDays(
+    shift,
+    userAssignments,
+    config,
+    excludeAssignmentId,
+    alternativeUsers
+  );
+  if (consecutiveDays) blocks.push(consecutiveDays);
 
   return {
     valid: blocks.length === 0,
