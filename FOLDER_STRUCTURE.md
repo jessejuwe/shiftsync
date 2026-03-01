@@ -26,7 +26,9 @@ shiftsync/
 │   │   ├── locations/
 │   │   ├── availability/
 │   │   ├── swap-requests/
-│   │   └── notifications/
+│   │   ├── notifications/
+│   │   ├── overtime/
+│   │   └── fairness/
 │   ├── layout.tsx
 │   ├── page.tsx
 │   └── globals.css
@@ -38,9 +40,16 @@ shiftsync/
 │   └── features/                 # Feature-specific components
 │       ├── shifts/
 │       ├── staff/
-│       └── availability/
+│       ├── availability/
+│       ├── overtime/             # Overtime dashboard
+│       └── fairness/             # Fairness analytics dashboard
 │
 ├── lib/
+│   ├── auth.ts                   # NextAuth config (handlers, auth, signIn, signOut)
+│   ├── domain/                   # Domain logic (pure functions)
+│   │   ├── fairness.ts           # Fairness analytics (hours, premium, equity)
+│   │   ├── overtime.ts           # Overtime & what-if engine
+│   │   └── shift-policy.ts       # Shift assignment validation
 │   ├── prisma.ts                 # Prisma client singleton
 │   ├── pusher.ts                 # Pusher client/server config
 │   ├── axios.ts                  # Axios instance with interceptors
