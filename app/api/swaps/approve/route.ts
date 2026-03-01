@@ -58,6 +58,20 @@ export async function POST(request: NextRequest) {
       };
 
       const currentState = fromPrismaStatus(swapRequest.status);
+
+      // CONFIRM is only valid from ACCEPTED; MANAGER_APPROVE only from PENDING_MANAGER.
+      // REQUESTED (Prisma PENDING before receiver accepts) has neither - reject explicitly.
+      if (currentState === SwapState.REQUESTED) {
+        return {
+          success: false as const,
+          error: {
+            code: "TRANSITION_FAILED",
+            message:
+              "Cannot approve: swap has not been accepted yet. The receiver must accept the swap first.",
+          },
+        };
+      }
+
       const event =
         currentState === SwapState.PENDING_MANAGER
           ? SwapEvent.MANAGER_APPROVE

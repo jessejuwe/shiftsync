@@ -1,8 +1,32 @@
-export default function LoginPage() {
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { LoginForm } from "./login-form";
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string; error?: string }>;
+}) {
+  const params = await searchParams;
+  const callbackUrl = params.callbackUrl ?? "/";
+  const error = params.error;
+
   return (
-    <div>
-      <h1>Login</h1>
-      {/* Add login form */}
-    </div>
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle>Sign in to ShiftSync</CardTitle>
+        <CardDescription>
+          Enter your email and password to access your account
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <LoginForm callbackUrl={callbackUrl} error={error} />
+      </CardContent>
+    </Card>
   );
 }

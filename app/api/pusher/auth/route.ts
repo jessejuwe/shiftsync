@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { getPusherServer } from "@/lib/pusher";
 
 /**
@@ -47,9 +48,9 @@ export async function POST(request: NextRequest) {
   // Private user channel: private-user-${userId}
   if (channel_name.startsWith("private-user-")) {
     const channelUserId = channel_name.replace("private-user-", "");
-    const currentUserId = getCurrentUserId(request);
+    const session = await auth();
 
-    if (!currentUserId || currentUserId !== channelUserId) {
+    if (!session?.user?.id || session.user.id !== channelUserId) {
       return NextResponse.json(
         { error: "Unauthorized to subscribe to this channel" },
         { status: 403 }
@@ -67,18 +68,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-/**
- * Get current user ID from request.
- * Replace with your auth (NextAuth getServerSession, etc.).
- */
-function getCurrentUserId(request: NextRequest): string | null {
-  // Try Authorization header: Bearer <userId> (dev placeholder)
-  const auth = request.headers.get("authorization");
-  if (auth?.startsWith("Bearer ")) {
-    return auth.slice(7).trim() || null;
-  }
-  // Try header for API clients
-  return request.headers.get("x-user-id") ?? null;
 }

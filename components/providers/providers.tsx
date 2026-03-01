@@ -2,6 +2,7 @@
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 
 import { ErrorListener } from "../shared";
@@ -13,8 +14,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider
         attribute="class"
         defaultTheme="system"
         enableSystem
@@ -26,5 +28,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <ReactQueryDevtools initialIsOpen={false} />
       </ThemeProvider>
     </QueryClientProvider>
+    </SessionProvider>
   );
 }

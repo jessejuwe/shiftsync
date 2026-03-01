@@ -304,12 +304,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 8. Broadcast shift assigned (fire-and-forget, outside tx)
-      void broadcastShiftAssigned(userId, shift.locationId, {
-        assignmentId: assignment.id,
-        shiftId,
-      });
-
       return {
         success: true as const,
         data: {
@@ -319,6 +313,7 @@ export async function POST(request: NextRequest) {
             userId: assignment.userId,
             status: assignment.status,
           },
+          locationId: shift.locationId,
         },
       };
     });
@@ -337,7 +332,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(result.data, { status: 201 });
+    // Broadcast after transaction commits so clients only receive if assignment persisted
+    void broadcastShiftAssigned(userId, result.data.locationId, {
+      assignmentId: result.data.assignment.id,
+      shiftId: result.data.assignment.shiftId,
+    });
+
+    return NextResponse.json(
+      { assignment: result.data.assignment },
+      { status: 201 }
+    );
   } catch (err) {
     // Handle Prisma unique constraint violation (P2002)
     const prismaError = err as { code?: string };

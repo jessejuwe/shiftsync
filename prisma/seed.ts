@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -8,7 +9,9 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  // Example seed - extend as needed
+  // Default password for seeded users: "password123"
+  const passwordHash = await bcrypt.hash("password123", 10);
+
   const admin = await prisma.user.upsert({
     where: { email: "admin@shiftsync.local" },
     update: {},
@@ -16,7 +19,7 @@ async function main() {
       email: "admin@shiftsync.local",
       name: "Admin User",
       role: "ADMIN",
-      passwordHash: "placeholder", // Replace with real hash
+      passwordHash,
     },
   });
 
