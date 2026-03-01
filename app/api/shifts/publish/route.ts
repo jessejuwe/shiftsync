@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   await prisma.shift.updateMany({
     where: {
       locationId,
-      ...(shiftIds?.length ? { id: { in: shiftIds } } : {}),
+      ...(Array.isArray(shiftIds) ? { id: { in: shiftIds } } : {}),
     },
     data: { isPublished: true },
   });

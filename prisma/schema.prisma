@@ -1,14 +1,14 @@
 // ShiftSync - Prisma Schema
 // All timestamps stored in UTC
+// Connection URLs are configured in prisma.config.ts
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 // =============================================================================
@@ -34,6 +34,7 @@ enum NotificationType {
   SWAP_REQUEST
   SWAP_APPROVED
   SWAP_REJECTED
+  SWAP_CANCELLED
   AVAILABILITY_REMINDER
   SYSTEM
 }

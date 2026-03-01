@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { broadcastSwapRequested } from "@/lib/pusher-events";
@@ -65,6 +65,21 @@ export async function POST(request: NextRequest) {
             message: "Initiator shift not found",
           },
         };
+      }
+
+      if (receiverShiftId) {
+        const receiverShift = await tx.shiftAssignment.findUnique({
+          where: { id: receiverShiftId },
+        });
+        if (!receiverShift || receiverShift.userId !== receiverId) {
+          return {
+            success: false as const,
+            error: {
+              code: "NOT_FOUND",
+              message: "Receiver shift not found or does not belong to receiver",
+            },
+          };
+        }
       }
 
       const initiatorPendingCount = await tx.swapRequest.count({

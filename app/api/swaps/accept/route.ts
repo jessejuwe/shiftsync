@@ -97,10 +97,14 @@ export async function POST(request: NextRequest) {
       for (const n of transitionResult.notifications) {
         const userId =
           n.target === "initiator" ? swapRequest.initiatorId : swapRequest.receiverId;
+        const notificationType =
+          n.type === "SWAP_ACCEPTED" || n.type === "SWAP_APPROVED"
+            ? "SWAP_APPROVED"
+            : "SWAP_REJECTED";
         await tx.notification.create({
           data: {
             userId,
-            type: n.type === "SWAP_ACCEPTED" ? "SWAP_APPROVED" : "SWAP_REJECTED",
+            type: notificationType,
             title: n.title,
             body: n.body,
             data: (n.data ?? {}) as object,

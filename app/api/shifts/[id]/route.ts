@@ -11,6 +11,7 @@ import {
 /**
  * PATCH /api/shifts/[id]
  * Update a shift and broadcast to schedule subscribers.
+ * Shift update and auto-cancel of affected swap requests run atomically in a transaction.
  */
 export async function PATCH(
   request: NextRequest,
@@ -34,17 +35,6 @@ export async function PATCH(
     );
   }
 
-  const shift = await prisma.shift.findUnique({
-    where: { id },
-  });
-
-  if (!shift) {
-    return NextResponse.json(
-      { code: "NOT_FOUND", message: "Shift not found" },
-      { status: 404 }
-    );
-  }
-
   const updateData: {
     startsAt?: Date;
     endsAt?: Date;
@@ -59,64 +49,93 @@ export async function PATCH(
   if (body.notes !== undefined) updateData.notes = body.notes;
   if (body.isPublished !== undefined) updateData.isPublished = body.isPublished;
 
-  const updated = await prisma.shift.update({
-    where: { id },
-    data: updateData,
-  });
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const shift = await tx.shift.findUnique({
+        where: { id },
+      });
 
-  // Auto-cancel swap requests that reference this shift
-  const assignmentsForShift = await prisma.shiftAssignment.findMany({
-    where: { shiftId: id },
-    select: { id: true },
-  });
-  const assignmentIds = assignmentsForShift.map((a) => a.id);
+      if (!shift) {
+        return { success: false as const, error: "NOT_FOUND" };
+      }
 
-  if (assignmentIds.length > 0) {
-    const affectedSwaps = await prisma.swapRequest.findMany({
-      where: {
-        status: "PENDING",
-        OR: [
-          { initiatorShiftId: { in: assignmentIds } },
-          { receiverShiftId: { in: assignmentIds } },
-        ],
-      },
+      const updatedShift = await tx.shift.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // Auto-cancel swap requests that reference this shift (atomic with update)
+      const assignmentsForShift = await tx.shiftAssignment.findMany({
+        where: { shiftId: id },
+        select: { id: true },
+      });
+      const assignmentIds = assignmentsForShift.map((a) => a.id);
+
+      if (assignmentIds.length > 0) {
+        const affectedSwaps = await tx.swapRequest.findMany({
+          where: {
+            status: "PENDING",
+            OR: [
+              { initiatorShiftId: { in: assignmentIds } },
+              { receiverShiftId: { in: assignmentIds } },
+            ],
+          },
+        });
+
+        for (const swap of affectedSwaps) {
+          const result = transition(
+            fromPrismaStatus(swap.status),
+            SwapEvent.SHIFT_EDITED,
+            {
+              initiatorId: swap.initiatorId,
+              receiverId: swap.receiverId,
+              actorId: "system",
+              requiresManagerApproval: false,
+            }
+          );
+          if (result.success && result.newState) {
+            await tx.swapRequest.update({
+              where: { id: swap.id },
+              data: { status: toPrismaStatus(result.newState) },
+            });
+          }
+        }
+      }
+
+      return { success: true as const, shift, updated: updatedShift };
     });
 
-    for (const swap of affectedSwaps) {
-      const result = transition(
-        fromPrismaStatus(swap.status),
-        SwapEvent.SHIFT_EDITED,
-        {
-          initiatorId: swap.initiatorId,
-          receiverId: swap.receiverId,
-          actorId: "system",
-          requiresManagerApproval: false,
-        }
+    if (!result.success) {
+      return NextResponse.json(
+        { code: "NOT_FOUND", message: "Shift not found" },
+        { status: 404 }
       );
-      if (result.success && result.newState) {
-        await prisma.swapRequest.update({
-          where: { id: swap.id },
-          data: { status: toPrismaStatus(result.newState) },
-        });
-      }
     }
+
+    const { shift, updated } = result;
+
+    await broadcastShiftEdited(shift.locationId, {
+      shiftId: id,
+      locationId: shift.locationId,
+      updatedAt: updated.updatedAt.toISOString(),
+    });
+
+    return NextResponse.json({
+      shift: {
+        id: updated.id,
+        locationId: updated.locationId,
+        startsAt: updated.startsAt.toISOString(),
+        endsAt: updated.endsAt.toISOString(),
+        title: updated.title,
+        notes: updated.notes,
+        isPublished: updated.isPublished,
+      },
+    });
+  } catch (err) {
+    console.error("Shift update error:", err);
+    return NextResponse.json(
+      { code: "INTERNAL_ERROR", message: "An unexpected error occurred" },
+      { status: 500 }
+    );
   }
-
-  await broadcastShiftEdited(shift.locationId, {
-    shiftId: id,
-    locationId: shift.locationId,
-    updatedAt: updated.updatedAt.toISOString(),
-  });
-
-  return NextResponse.json({
-    shift: {
-      id: updated.id,
-      locationId: updated.locationId,
-      startsAt: updated.startsAt.toISOString(),
-      endsAt: updated.endsAt.toISOString(),
-      title: updated.title,
-      notes: updated.notes,
-      isPublished: updated.isPublished,
-    },
-  });
 }

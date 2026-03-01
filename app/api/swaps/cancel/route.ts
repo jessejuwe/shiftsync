@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
           await tx.notification.create({
             data: {
               userId,
-              type: "SWAP_REJECTED",
+              type: "SWAP_CANCELLED",
               title: n.title,
               body: n.body,
               data: (n.data ?? {}) as object,

@@ -3,7 +3,7 @@
  * Used when a swap is APPROVED (accept or manager approve).
  */
 
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 import {
   validateShiftAssignment,
   type PolicyShift,

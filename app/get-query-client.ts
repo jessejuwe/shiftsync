@@ -23,11 +23,6 @@ const queryConfig: QueryClientConfig = {
         return false;
       },
     },
-    mutations: {
-      onSuccess: () => console.log("Mutation success!"),
-      onError: error => console.error("Mutation error:", error),
-      onSettled: () => console.log("Mutation settled"),
-    },
   },
 };
 
@@ -51,7 +46,7 @@ export function getQueryClient() {
   }
 }
 
-export function resetQueryQlient() {
+export function resetQueryClient() {
   const queryClient = getQueryClient();
   queryClient.clear();
   if (browserQueryClient) {
