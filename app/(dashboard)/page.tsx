@@ -1,7 +1,9 @@
+import { OvertimeDashboard } from "@/components/features/overtime/overtime-dashboard";
+
 export default function DashboardPage() {
   return (
     <div>
-      <h1>Dashboard</h1>
+      <OvertimeDashboard />
     </div>
   );
 }

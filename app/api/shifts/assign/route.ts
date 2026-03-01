@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
   broadcastAssignmentConflict,
@@ -19,6 +20,7 @@ const NOT_FOUND = "NOT_FOUND";
 interface AssignShiftBody {
   shiftId: string;
   userId: string;
+  overrideReason?: string;
 }
 
 function toPolicyAssignment(a: {
@@ -56,13 +58,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { shiftId, userId } = body;
+  const { shiftId, userId, overrideReason } = body;
   if (!shiftId || !userId) {
     return NextResponse.json(
       { code: "MISSING_FIELDS", message: "shiftId and userId are required" },
       { status: 400 }
     );
   }
+
+  const session = await auth();
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -253,7 +257,17 @@ export async function POST(request: NextRequest) {
         now: new Date(),
       });
 
-      if (!validation.valid) {
+      const canOverride7thDay =
+        !validation.valid &&
+        validation.blocks.length === 1 &&
+        validation.blocks[0].code === "CONSECUTIVE_DAYS_EXCEEDED" &&
+        validation.blocks[0].metadata?.requiresOverride === true &&
+        typeof overrideReason === "string" &&
+        overrideReason.trim().length > 0 &&
+        (session?.user as { role?: string } | undefined)?.role &&
+        ["MANAGER", "ADMIN"].includes((session!.user as { role?: string }).role!);
+
+      if (!validation.valid && !canOverride7thDay) {
         const conflictBlock = validation.blocks[0];
         const conflictType =
           conflictBlock?.code === "DOUBLE_BOOKING"
@@ -303,6 +317,23 @@ export async function POST(request: NextRequest) {
           data: { shiftId, assignmentId: assignment.id },
         },
       });
+
+      // 8. Audit log for 7th-day override
+      if (canOverride7thDay && session?.user?.id) {
+        await tx.auditLog.create({
+          data: {
+            userId: session.user.id,
+            action: "OVERRIDE_7TH_DAY",
+            entityType: "ShiftAssignment",
+            entityId: assignment.id,
+            changes: {
+              overrideReason: overrideReason!.trim(),
+              assignedUserId: userId,
+              shiftId,
+            },
+          },
+        });
+      }
 
       return {
         success: true as const,

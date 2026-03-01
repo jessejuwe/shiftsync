@@ -178,6 +178,52 @@ export function calculateProjectedDailyHours(
 }
 
 /**
+ * Calculate max consecutive working days from existing assignments only (no proposed shift).
+ */
+export function calculateConsecutiveDaysCurrent(
+  assignments: AssignmentLike[],
+  config: Partial<OvertimeConfig> = {}
+): { maxConsecutive: number; is6thDay: boolean; is7thOrMore: boolean; limit: number } {
+  const { maxConsecutiveDays } = { ...DEFAULT_OVERTIME_CONFIG, ...config };
+
+  const dateKeys = new Set<string>();
+  for (const a of assignments) {
+    dateKeys.add(toDateKey(a.startsAt));
+  }
+  const sortedDates = Array.from(dateKeys).sort();
+
+  let maxConsecutive = 0;
+  let current = 0;
+  let prevDate: string | null = null;
+
+  for (const d of sortedDates) {
+    if (prevDate === null) {
+      current = 1;
+    } else {
+      const prev = new Date(prevDate);
+      const curr = new Date(d);
+      const diffDays = Math.round(
+        (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (diffDays === 1) {
+        current += 1;
+      } else {
+        current = 1;
+      }
+    }
+    maxConsecutive = Math.max(maxConsecutive, current);
+    prevDate = d;
+  }
+
+  return {
+    maxConsecutive,
+    is6thDay: maxConsecutive === 6,
+    is7thOrMore: maxConsecutive >= 7,
+    limit: maxConsecutiveDays,
+  };
+}
+
+/**
  * Calculate max consecutive working days when including a proposed shift.
  * Returns the length of the longest streak of consecutive days with assignments.
  */

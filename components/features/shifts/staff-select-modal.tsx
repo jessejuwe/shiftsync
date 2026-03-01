@@ -21,6 +21,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { ValidationDisplay } from "./validation-display";
 import type { ValidationResult } from "./validation-display";
 
@@ -65,6 +66,9 @@ export function StaffSelectModal({
     userId: string;
     preview: AssignPreview;
   } | null>(null);
+  const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [pendingOverrideUserId, setPendingOverrideUserId] = useState<string | null>(null);
 
   const { data: staffData, isLoading } = useQuery({
     queryKey: ["staff", shiftLocationId],
@@ -79,31 +83,58 @@ export function StaffSelectModal({
   });
 
   const assignMutation = useMutation({
-    mutationFn: async ({ userId }: { userId: string }) => {
+    mutationFn: async ({
+      userId,
+      overrideReason: reason,
+    }: { userId: string; overrideReason?: string }) => {
       if (!shiftId) throw new Error("No shift selected");
       const res = await fetch("/api/shifts/assign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shiftId, userId }),
+        body: JSON.stringify({
+          shiftId,
+          userId,
+          ...(reason && { overrideReason: reason }),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         const err = new Error(data.message ?? "Assignment failed") as Error & {
           status?: number;
           details?: { blocks?: ValidationResult[]; warnings?: ValidationResult[] };
+          userId?: string;
         };
         err.status = res.status;
         err.details = data.details;
+        err.userId = userId;
         throw err;
       }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      setOverrideDialogOpen(false);
+      setPendingOverrideUserId(null);
       onAssignSuccess();
       onOpenChange(false);
     },
     onError: (err) => {
+      const e = err as Error & {
+        status?: number;
+        details?: { blocks?: Array<ValidationResult & { metadata?: { requiresOverride?: boolean } }> };
+        userId?: string;
+      };
+      const block = e.details?.blocks?.[0];
+      const needsOverride =
+        e.status === 422 &&
+        block?.code === "CONSECUTIVE_DAYS_EXCEEDED" &&
+        block.metadata?.requiresOverride === true &&
+        e.userId;
+      if (needsOverride) {
+        setPendingOverrideUserId(e.userId!);
+        setOverrideReason("");
+        setOverrideDialogOpen(true);
+      }
       onAssignError?.(err);
     },
   });
@@ -137,6 +168,18 @@ export function StaffSelectModal({
       assignMutation.mutate({ userId: pendingAssign.userId });
       setConfirmOpen(false);
       setPendingAssign(null);
+    }
+  };
+
+  const handleOverrideSubmit = () => {
+    if (pendingOverrideUserId && overrideReason.trim()) {
+      assignMutation.mutate({
+        userId: pendingOverrideUserId,
+        overrideReason: overrideReason.trim(),
+      });
+      setOverrideDialogOpen(false);
+      setPendingOverrideUserId(null);
+      setOverrideReason("");
     }
   };
 
@@ -244,6 +287,56 @@ export function StaffSelectModal({
               className="bg-amber-600 hover:bg-amber-700"
             >
               Assign anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={overrideDialogOpen}
+        onOpenChange={(open) => {
+          setOverrideDialogOpen(open);
+          if (!open) {
+            setPendingOverrideUserId(null);
+            setOverrideReason("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>7th consecutive day</AlertDialogTitle>
+            <AlertDialogDescription>
+              This assignment would be the 7th consecutive working day. A reason
+              is required to override. The override will be stored in the audit
+              log.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-2">
+            <label
+              htmlFor="override-reason"
+              className="text-sm font-medium leading-none"
+            >
+              Override reason
+            </label>
+            <Textarea
+              id="override-reason"
+              placeholder="e.g. Staff shortage, emergency coverage..."
+              value={overrideReason}
+              onChange={(e) => setOverrideReason(e.target.value)}
+              rows={3}
+              className="resize-none"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleOverrideSubmit();
+              }}
+              disabled={!overrideReason.trim()}
+              className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50"
+            >
+              Assign with override
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

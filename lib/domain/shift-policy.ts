@@ -24,6 +24,7 @@ export interface ValidationResult {
   code: ValidationCode;
   message: string;
   suggestions?: PolicyUser[];
+  metadata?: { maxConsecutive?: number; is6thDay?: boolean; requiresOverride?: boolean };
 }
 
 export interface PolicyUser {
@@ -429,8 +430,22 @@ export function checkConsecutiveDays(
     return {
       type: "block",
       code: "CONSECUTIVE_DAYS_EXCEEDED",
-      message: `Assignment would exceed ${maxConsecutiveDays} consecutive working days (${maxConsecutive} days).`,
+      message:
+        maxConsecutive === 7
+          ? `Assignment would be 7th consecutive day. Override with reason required.`
+          : `Assignment would exceed ${maxConsecutiveDays} consecutive working days (${maxConsecutive} days).`,
       suggestions: alternativeUsers,
+      metadata: { maxConsecutive, requiresOverride: maxConsecutive === 7 },
+    };
+  }
+
+  if (maxConsecutive === maxConsecutiveDays) {
+    return {
+      type: "warning",
+      code: "CONSECUTIVE_DAYS_EXCEEDED",
+      message: `Assignment would be 6th consecutive working day.`,
+      suggestions: alternativeUsers,
+      metadata: { maxConsecutive, is6thDay: true },
     };
   }
 
@@ -550,7 +565,10 @@ export function validateShiftAssignment(
     excludeAssignmentId,
     alternativeUsers
   );
-  if (consecutiveDays) blocks.push(consecutiveDays);
+  if (consecutiveDays) {
+    if (consecutiveDays.type === "block") blocks.push(consecutiveDays);
+    else warnings.push(consecutiveDays);
+  }
 
   return {
     valid: blocks.length === 0,
