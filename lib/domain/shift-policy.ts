@@ -151,9 +151,9 @@ export function checkRestPeriod(
   if (violations.length === 0) return null;
 
   return {
-    type: "warning",
+    type: "block",
     code: "REST_VIOLATION",
-    message: `Less than ${minRestHours}h rest between shifts. May violate labor regulations.`,
+    message: `Less than ${minRestHours}h rest between shifts. Labor regulations require at least ${minRestHours}h rest.`,
   };
 }
 
@@ -495,7 +495,7 @@ export function validateShiftAssignment(
   if (doubleBook) blocks.push(doubleBook);
 
   const restPeriod = checkRestPeriod(shift, userAssignments, config);
-  if (restPeriod) warnings.push(restPeriod);
+  if (restPeriod) blocks.push(restPeriod);
 
   const skillMatch = checkSkillMatch(
     shift,

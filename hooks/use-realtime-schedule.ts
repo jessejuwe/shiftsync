@@ -27,7 +27,8 @@ export interface RealtimeScheduleCallbacks {
 }
 
 export interface UseRealtimeScheduleOptions {
-  locationId: string;
+  locationId?: string;
+  locationIds?: string[];
   userId?: string;
   authEndpoint?: string;
   callbacks?: RealtimeScheduleCallbacks;
@@ -44,6 +45,7 @@ export interface UseRealtimeScheduleOptions {
  */
 export function useRealtimeSchedule({
   locationId,
+  locationIds,
   userId,
   authEndpoint = "/api/pusher/auth",
   callbacks = {},
@@ -52,11 +54,13 @@ export function useRealtimeSchedule({
   const callbacksRef = useRef(callbacks);
   callbacksRef.current = callbacks;
 
+  const ids = locationIds ?? (locationId ? [locationId] : []);
+
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? "us2";
 
-    if (!key) {
+    if (!key || ids.length === 0) {
       return;
     }
 
@@ -75,49 +79,43 @@ export function useRealtimeSchedule({
 
     pusherRef.current = pusher;
 
-    // Subscribe to schedule channel (public)
-    const scheduleChannel = pusher.subscribe(CHANNELS.schedule(locationId));
+    for (const locId of ids) {
+      const ch = pusher.subscribe(CHANNELS.schedule(locId));
+      ch.bind(
+        PUSHER_EVENTS.SCHEDULE_PUBLISHED,
+        (payload: SchedulePublishedPayload) => {
+          callbacksRef.current.onSchedulePublished?.(payload);
+        }
+      );
+      ch.bind(
+        PUSHER_EVENTS.SHIFT_ASSIGNED,
+        (payload: ShiftAssignedPayload) => {
+          callbacksRef.current.onShiftAssigned?.(payload);
+        }
+      );
+      ch.bind(
+        PUSHER_EVENTS.SHIFT_EDITED,
+        (payload: ShiftEditedPayload) => {
+          callbacksRef.current.onShiftEdited?.(payload);
+        }
+      );
+    }
 
-    scheduleChannel.bind(
-      PUSHER_EVENTS.SCHEDULE_PUBLISHED,
-      (payload: SchedulePublishedPayload) => {
-        callbacksRef.current.onSchedulePublished?.(payload);
-      }
-    );
-
-    scheduleChannel.bind(
-      PUSHER_EVENTS.SHIFT_ASSIGNED,
-      (payload: ShiftAssignedPayload) => {
-        callbacksRef.current.onShiftAssigned?.(payload);
-      }
-    );
-
-    scheduleChannel.bind(
-      PUSHER_EVENTS.SHIFT_EDITED,
-      (payload: ShiftEditedPayload) => {
-        callbacksRef.current.onShiftEdited?.(payload);
-      }
-    );
-
-    // Subscribe to user channel (private) if userId provided
     let userChannel: Channel | null = null;
     if (userId) {
       userChannel = pusher.subscribe(CHANNELS.user(userId));
-
       userChannel.bind(
         PUSHER_EVENTS.SWAP_REQUESTED,
         (payload: SwapRequestedPayload) => {
           callbacksRef.current.onSwapRequested?.(payload);
         }
       );
-
       userChannel.bind(
         PUSHER_EVENTS.SWAP_APPROVED,
         (payload: SwapApprovedPayload) => {
           callbacksRef.current.onSwapApproved?.(payload);
         }
       );
-
       userChannel.bind(
         PUSHER_EVENTS.ASSIGNMENT_CONFLICT,
         (payload: AssignmentConflictPayload) => {
@@ -127,18 +125,18 @@ export function useRealtimeSchedule({
     }
 
     return () => {
-      scheduleChannel.unbind_all();
-      pusher.unsubscribe(CHANNELS.schedule(locationId));
-
+      for (const locId of ids) {
+        pusher.channel(CHANNELS.schedule(locId))?.unbind_all();
+        pusher.unsubscribe(CHANNELS.schedule(locId));
+      }
       if (userChannel && userId) {
         userChannel.unbind_all();
         pusher.unsubscribe(CHANNELS.user(userId));
       }
-
       pusher.disconnect();
       pusherRef.current = null;
     };
-  }, [locationId, userId, authEndpoint]);
+  }, [ids.join(","), userId, authEndpoint]);
 
   const isConnected = useCallback(() => {
     return pusherRef.current?.connection.state === "connected";
