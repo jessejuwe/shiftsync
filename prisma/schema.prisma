@@ -135,6 +135,7 @@ model Location {
   certifications   Certification[]
   shifts           Shift[]
   availabilityWindows AvailabilityWindow[]
+  auditLogs        AuditLog[]
 
   @@index([isActive])
   @@map("locations")
@@ -342,18 +343,21 @@ model AuditLog {
   id         String   @id @default(cuid())
   userId     String?  @map("user_id")
   action     String
-  entityType String   @map("entity_type") // "Shift", "User", "Assignment", etc.
+  entityType String   @map("entity_type") // "Shift", "ShiftAssignment", "User", etc.
   entityId   String   @map("entity_id")
-  changes    Json?    // Before/after for updates
+  changes    Json?    // { before?: {...}, after?: {...} } or action-specific payload
+  locationId String?  @map("location_id")
   ipAddress  String?  @map("ip_address")
   userAgent  String?  @map("user_agent")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
   @@index([action])
+  @@index([locationId])
   @@map("audit_logs")
 }

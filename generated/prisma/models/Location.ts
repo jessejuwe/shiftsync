@@ -201,6 +201,7 @@ export type LocationWhereInput = {
   certifications?: Prisma.CertificationListRelationFilter
   shifts?: Prisma.ShiftListRelationFilter
   availabilityWindows?: Prisma.AvailabilityWindowListRelationFilter
+  auditLogs?: Prisma.AuditLogListRelationFilter
 }
 
 export type LocationOrderByWithRelationInput = {
@@ -214,6 +215,7 @@ export type LocationOrderByWithRelationInput = {
   certifications?: Prisma.CertificationOrderByRelationAggregateInput
   shifts?: Prisma.ShiftOrderByRelationAggregateInput
   availabilityWindows?: Prisma.AvailabilityWindowOrderByRelationAggregateInput
+  auditLogs?: Prisma.AuditLogOrderByRelationAggregateInput
 }
 
 export type LocationWhereUniqueInput = Prisma.AtLeast<{
@@ -230,6 +232,7 @@ export type LocationWhereUniqueInput = Prisma.AtLeast<{
   certifications?: Prisma.CertificationListRelationFilter
   shifts?: Prisma.ShiftListRelationFilter
   availabilityWindows?: Prisma.AvailabilityWindowListRelationFilter
+  auditLogs?: Prisma.AuditLogListRelationFilter
 }, "id">
 
 export type LocationOrderByWithAggregationInput = {
@@ -269,6 +272,7 @@ export type LocationCreateInput = {
   certifications?: Prisma.CertificationCreateNestedManyWithoutLocationInput
   shifts?: Prisma.ShiftCreateNestedManyWithoutLocationInput
   availabilityWindows?: Prisma.AvailabilityWindowCreateNestedManyWithoutLocationInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutLocationInput
 }
 
 export type LocationUncheckedCreateInput = {
@@ -282,6 +286,7 @@ export type LocationUncheckedCreateInput = {
   certifications?: Prisma.CertificationUncheckedCreateNestedManyWithoutLocationInput
   shifts?: Prisma.ShiftUncheckedCreateNestedManyWithoutLocationInput
   availabilityWindows?: Prisma.AvailabilityWindowUncheckedCreateNestedManyWithoutLocationInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type LocationUpdateInput = {
@@ -295,6 +300,7 @@ export type LocationUpdateInput = {
   certifications?: Prisma.CertificationUpdateManyWithoutLocationNestedInput
   shifts?: Prisma.ShiftUpdateManyWithoutLocationNestedInput
   availabilityWindows?: Prisma.AvailabilityWindowUpdateManyWithoutLocationNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutLocationNestedInput
 }
 
 export type LocationUncheckedUpdateInput = {
@@ -308,6 +314,7 @@ export type LocationUncheckedUpdateInput = {
   certifications?: Prisma.CertificationUncheckedUpdateManyWithoutLocationNestedInput
   shifts?: Prisma.ShiftUncheckedUpdateManyWithoutLocationNestedInput
   availabilityWindows?: Prisma.AvailabilityWindowUncheckedUpdateManyWithoutLocationNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type LocationCreateManyInput = {
@@ -375,6 +382,11 @@ export type LocationScalarRelationFilter = {
   isNot?: Prisma.LocationWhereInput
 }
 
+export type LocationNullableScalarRelationFilter = {
+  is?: Prisma.LocationWhereInput | null
+  isNot?: Prisma.LocationWhereInput | null
+}
+
 export type LocationCreateNestedOneWithoutCertificationsInput = {
   create?: Prisma.XOR<Prisma.LocationCreateWithoutCertificationsInput, Prisma.LocationUncheckedCreateWithoutCertificationsInput>
   connectOrCreate?: Prisma.LocationCreateOrConnectWithoutCertificationsInput
@@ -417,6 +429,22 @@ export type LocationUpdateOneRequiredWithoutAvailabilityWindowsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.LocationUpdateToOneWithWhereWithoutAvailabilityWindowsInput, Prisma.LocationUpdateWithoutAvailabilityWindowsInput>, Prisma.LocationUncheckedUpdateWithoutAvailabilityWindowsInput>
 }
 
+export type LocationCreateNestedOneWithoutAuditLogsInput = {
+  create?: Prisma.XOR<Prisma.LocationCreateWithoutAuditLogsInput, Prisma.LocationUncheckedCreateWithoutAuditLogsInput>
+  connectOrCreate?: Prisma.LocationCreateOrConnectWithoutAuditLogsInput
+  connect?: Prisma.LocationWhereUniqueInput
+}
+
+export type LocationUpdateOneWithoutAuditLogsNestedInput = {
+  create?: Prisma.XOR<Prisma.LocationCreateWithoutAuditLogsInput, Prisma.LocationUncheckedCreateWithoutAuditLogsInput>
+  connectOrCreate?: Prisma.LocationCreateOrConnectWithoutAuditLogsInput
+  upsert?: Prisma.LocationUpsertWithoutAuditLogsInput
+  disconnect?: Prisma.LocationWhereInput | boolean
+  delete?: Prisma.LocationWhereInput | boolean
+  connect?: Prisma.LocationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.LocationUpdateToOneWithWhereWithoutAuditLogsInput, Prisma.LocationUpdateWithoutAuditLogsInput>, Prisma.LocationUncheckedUpdateWithoutAuditLogsInput>
+}
+
 export type LocationCreateWithoutCertificationsInput = {
   id?: string
   name: string
@@ -427,6 +455,7 @@ export type LocationCreateWithoutCertificationsInput = {
   updatedAt?: Date | string
   shifts?: Prisma.ShiftCreateNestedManyWithoutLocationInput
   availabilityWindows?: Prisma.AvailabilityWindowCreateNestedManyWithoutLocationInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutLocationInput
 }
 
 export type LocationUncheckedCreateWithoutCertificationsInput = {
@@ -439,6 +468,7 @@ export type LocationUncheckedCreateWithoutCertificationsInput = {
   updatedAt?: Date | string
   shifts?: Prisma.ShiftUncheckedCreateNestedManyWithoutLocationInput
   availabilityWindows?: Prisma.AvailabilityWindowUncheckedCreateNestedManyWithoutLocationInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type LocationCreateOrConnectWithoutCertificationsInput = {
@@ -467,6 +497,7 @@ export type LocationUpdateWithoutCertificationsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   shifts?: Prisma.ShiftUpdateManyWithoutLocationNestedInput
   availabilityWindows?: Prisma.AvailabilityWindowUpdateManyWithoutLocationNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutLocationNestedInput
 }
 
 export type LocationUncheckedUpdateWithoutCertificationsInput = {
@@ -479,6 +510,7 @@ export type LocationUncheckedUpdateWithoutCertificationsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   shifts?: Prisma.ShiftUncheckedUpdateManyWithoutLocationNestedInput
   availabilityWindows?: Prisma.AvailabilityWindowUncheckedUpdateManyWithoutLocationNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type LocationCreateWithoutShiftsInput = {
@@ -491,6 +523,7 @@ export type LocationCreateWithoutShiftsInput = {
   updatedAt?: Date | string
   certifications?: Prisma.CertificationCreateNestedManyWithoutLocationInput
   availabilityWindows?: Prisma.AvailabilityWindowCreateNestedManyWithoutLocationInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutLocationInput
 }
 
 export type LocationUncheckedCreateWithoutShiftsInput = {
@@ -503,6 +536,7 @@ export type LocationUncheckedCreateWithoutShiftsInput = {
   updatedAt?: Date | string
   certifications?: Prisma.CertificationUncheckedCreateNestedManyWithoutLocationInput
   availabilityWindows?: Prisma.AvailabilityWindowUncheckedCreateNestedManyWithoutLocationInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type LocationCreateOrConnectWithoutShiftsInput = {
@@ -531,6 +565,7 @@ export type LocationUpdateWithoutShiftsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   certifications?: Prisma.CertificationUpdateManyWithoutLocationNestedInput
   availabilityWindows?: Prisma.AvailabilityWindowUpdateManyWithoutLocationNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutLocationNestedInput
 }
 
 export type LocationUncheckedUpdateWithoutShiftsInput = {
@@ -543,6 +578,7 @@ export type LocationUncheckedUpdateWithoutShiftsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   certifications?: Prisma.CertificationUncheckedUpdateManyWithoutLocationNestedInput
   availabilityWindows?: Prisma.AvailabilityWindowUncheckedUpdateManyWithoutLocationNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 export type LocationCreateWithoutAvailabilityWindowsInput = {
@@ -555,6 +591,7 @@ export type LocationCreateWithoutAvailabilityWindowsInput = {
   updatedAt?: Date | string
   certifications?: Prisma.CertificationCreateNestedManyWithoutLocationInput
   shifts?: Prisma.ShiftCreateNestedManyWithoutLocationInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutLocationInput
 }
 
 export type LocationUncheckedCreateWithoutAvailabilityWindowsInput = {
@@ -567,6 +604,7 @@ export type LocationUncheckedCreateWithoutAvailabilityWindowsInput = {
   updatedAt?: Date | string
   certifications?: Prisma.CertificationUncheckedCreateNestedManyWithoutLocationInput
   shifts?: Prisma.ShiftUncheckedCreateNestedManyWithoutLocationInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutLocationInput
 }
 
 export type LocationCreateOrConnectWithoutAvailabilityWindowsInput = {
@@ -595,6 +633,7 @@ export type LocationUpdateWithoutAvailabilityWindowsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   certifications?: Prisma.CertificationUpdateManyWithoutLocationNestedInput
   shifts?: Prisma.ShiftUpdateManyWithoutLocationNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutLocationNestedInput
 }
 
 export type LocationUncheckedUpdateWithoutAvailabilityWindowsInput = {
@@ -607,6 +646,75 @@ export type LocationUncheckedUpdateWithoutAvailabilityWindowsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   certifications?: Prisma.CertificationUncheckedUpdateManyWithoutLocationNestedInput
   shifts?: Prisma.ShiftUncheckedUpdateManyWithoutLocationNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutLocationNestedInput
+}
+
+export type LocationCreateWithoutAuditLogsInput = {
+  id?: string
+  name: string
+  address?: string | null
+  timezone: string
+  isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  certifications?: Prisma.CertificationCreateNestedManyWithoutLocationInput
+  shifts?: Prisma.ShiftCreateNestedManyWithoutLocationInput
+  availabilityWindows?: Prisma.AvailabilityWindowCreateNestedManyWithoutLocationInput
+}
+
+export type LocationUncheckedCreateWithoutAuditLogsInput = {
+  id?: string
+  name: string
+  address?: string | null
+  timezone: string
+  isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  certifications?: Prisma.CertificationUncheckedCreateNestedManyWithoutLocationInput
+  shifts?: Prisma.ShiftUncheckedCreateNestedManyWithoutLocationInput
+  availabilityWindows?: Prisma.AvailabilityWindowUncheckedCreateNestedManyWithoutLocationInput
+}
+
+export type LocationCreateOrConnectWithoutAuditLogsInput = {
+  where: Prisma.LocationWhereUniqueInput
+  create: Prisma.XOR<Prisma.LocationCreateWithoutAuditLogsInput, Prisma.LocationUncheckedCreateWithoutAuditLogsInput>
+}
+
+export type LocationUpsertWithoutAuditLogsInput = {
+  update: Prisma.XOR<Prisma.LocationUpdateWithoutAuditLogsInput, Prisma.LocationUncheckedUpdateWithoutAuditLogsInput>
+  create: Prisma.XOR<Prisma.LocationCreateWithoutAuditLogsInput, Prisma.LocationUncheckedCreateWithoutAuditLogsInput>
+  where?: Prisma.LocationWhereInput
+}
+
+export type LocationUpdateToOneWithWhereWithoutAuditLogsInput = {
+  where?: Prisma.LocationWhereInput
+  data: Prisma.XOR<Prisma.LocationUpdateWithoutAuditLogsInput, Prisma.LocationUncheckedUpdateWithoutAuditLogsInput>
+}
+
+export type LocationUpdateWithoutAuditLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  certifications?: Prisma.CertificationUpdateManyWithoutLocationNestedInput
+  shifts?: Prisma.ShiftUpdateManyWithoutLocationNestedInput
+  availabilityWindows?: Prisma.AvailabilityWindowUpdateManyWithoutLocationNestedInput
+}
+
+export type LocationUncheckedUpdateWithoutAuditLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  certifications?: Prisma.CertificationUncheckedUpdateManyWithoutLocationNestedInput
+  shifts?: Prisma.ShiftUncheckedUpdateManyWithoutLocationNestedInput
+  availabilityWindows?: Prisma.AvailabilityWindowUncheckedUpdateManyWithoutLocationNestedInput
 }
 
 
@@ -618,12 +726,14 @@ export type LocationCountOutputType = {
   certifications: number
   shifts: number
   availabilityWindows: number
+  auditLogs: number
 }
 
 export type LocationCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   certifications?: boolean | LocationCountOutputTypeCountCertificationsArgs
   shifts?: boolean | LocationCountOutputTypeCountShiftsArgs
   availabilityWindows?: boolean | LocationCountOutputTypeCountAvailabilityWindowsArgs
+  auditLogs?: boolean | LocationCountOutputTypeCountAuditLogsArgs
 }
 
 /**
@@ -657,6 +767,13 @@ export type LocationCountOutputTypeCountAvailabilityWindowsArgs<ExtArgs extends 
   where?: Prisma.AvailabilityWindowWhereInput
 }
 
+/**
+ * LocationCountOutputType without action
+ */
+export type LocationCountOutputTypeCountAuditLogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AuditLogWhereInput
+}
+
 
 export type LocationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -669,6 +786,7 @@ export type LocationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   certifications?: boolean | Prisma.Location$certificationsArgs<ExtArgs>
   shifts?: boolean | Prisma.Location$shiftsArgs<ExtArgs>
   availabilityWindows?: boolean | Prisma.Location$availabilityWindowsArgs<ExtArgs>
+  auditLogs?: boolean | Prisma.Location$auditLogsArgs<ExtArgs>
   _count?: boolean | Prisma.LocationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["location"]>
 
@@ -707,6 +825,7 @@ export type LocationInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   certifications?: boolean | Prisma.Location$certificationsArgs<ExtArgs>
   shifts?: boolean | Prisma.Location$shiftsArgs<ExtArgs>
   availabilityWindows?: boolean | Prisma.Location$availabilityWindowsArgs<ExtArgs>
+  auditLogs?: boolean | Prisma.Location$auditLogsArgs<ExtArgs>
   _count?: boolean | Prisma.LocationCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type LocationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -718,6 +837,7 @@ export type $LocationPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     certifications: Prisma.$CertificationPayload<ExtArgs>[]
     shifts: Prisma.$ShiftPayload<ExtArgs>[]
     availabilityWindows: Prisma.$AvailabilityWindowPayload<ExtArgs>[]
+    auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1124,6 +1244,7 @@ export interface Prisma__LocationClient<T, Null = never, ExtArgs extends runtime
   certifications<T extends Prisma.Location$certificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Location$certificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CertificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   shifts<T extends Prisma.Location$shiftsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Location$shiftsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ShiftPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   availabilityWindows<T extends Prisma.Location$availabilityWindowsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Location$availabilityWindowsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AvailabilityWindowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  auditLogs<T extends Prisma.Location$auditLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Location$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1617,6 +1738,30 @@ export type Location$availabilityWindowsArgs<ExtArgs extends runtime.Types.Exten
   take?: number
   skip?: number
   distinct?: Prisma.AvailabilityWindowScalarFieldEnum | Prisma.AvailabilityWindowScalarFieldEnum[]
+}
+
+/**
+ * Location.auditLogs
+ */
+export type Location$auditLogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AuditLog
+   */
+  select?: Prisma.AuditLogSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AuditLog
+   */
+  omit?: Prisma.AuditLogOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AuditLogInclude<ExtArgs> | null
+  where?: Prisma.AuditLogWhereInput
+  orderBy?: Prisma.AuditLogOrderByWithRelationInput | Prisma.AuditLogOrderByWithRelationInput[]
+  cursor?: Prisma.AuditLogWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AuditLogScalarFieldEnum | Prisma.AuditLogScalarFieldEnum[]
 }
 
 /**

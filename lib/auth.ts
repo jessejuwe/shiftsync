@@ -78,7 +78,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         pathname.startsWith("/staff") ||
         pathname.startsWith("/locations") ||
         pathname.startsWith("/availability") ||
-        pathname.startsWith("/settings");
+        pathname.startsWith("/settings") ||
+        pathname.startsWith("/audit");
 
       if (isProtected) {
         return !!auth?.user;

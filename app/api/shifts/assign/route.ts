@@ -326,10 +326,15 @@ export async function POST(request: NextRequest) {
             action: "OVERRIDE_7TH_DAY",
             entityType: "ShiftAssignment",
             entityId: assignment.id,
+            locationId: shift.locationId,
             changes: {
-              overrideReason: overrideReason!.trim(),
-              assignedUserId: userId,
-              shiftId,
+              before: null,
+              after: {
+                assignmentId: assignment.id,
+                shiftId,
+                assignedUserId: userId,
+                overrideReason: overrideReason!.trim(),
+              },
             },
           },
         });
