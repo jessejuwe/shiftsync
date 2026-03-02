@@ -69,10 +69,8 @@ export async function GET(request: NextRequest) {
       const assignments = await prisma.shiftAssignment.findMany({
         where: {
           userId: s.id,
-          ...(locationId && {
-            shift: { locationId },
-          }),
           shift: {
+            ...(locationId && { locationId }),
             startsAt: { gte: weekStart, lte: weekEnd },
           },
         },

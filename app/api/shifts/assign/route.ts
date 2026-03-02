@@ -278,13 +278,6 @@ export async function POST(request: NextRequest) {
                   conflictBlock?.code === "DAILY_HOURS_EXCEEDED"
                 ? "overtime"
                 : "double-booking";
-        await broadcastAssignmentConflict(userId, {
-          shiftId,
-          userId,
-          conflictType,
-          message: conflictBlock?.message,
-        });
-
         return {
           success: false as const,
           error: {
@@ -293,6 +286,12 @@ export async function POST(request: NextRequest) {
             details: {
               blocks: validation.blocks,
               warnings: validation.warnings,
+            },
+            conflictPayload: {
+              userId,
+              shiftId,
+              conflictType,
+              message: conflictBlock?.message,
             },
           },
         };
@@ -355,13 +354,24 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      const { code, message, details } = result.error;
+      const { code, message, details, conflictPayload } = result.error;
       const status =
         code === NOT_FOUND
           ? 404
           : code === ASSIGNMENT_CONFLICT
             ? 409
             : 422;
+      if (conflictPayload) {
+        void broadcastAssignmentConflict(conflictPayload.userId, {
+          shiftId: conflictPayload.shiftId,
+          userId: conflictPayload.userId,
+          conflictType: conflictPayload.conflictType as
+            | "double-booking"
+            | "rest-period"
+            | "overtime",
+          message: conflictPayload.message,
+        });
+      }
       return NextResponse.json(
         { code, message, ...(details && { details }) },
         { status }
