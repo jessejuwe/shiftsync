@@ -21,6 +21,7 @@ export const CHANNELS = {
 export const PUSHER_EVENTS = {
   SCHEDULE_PUBLISHED: "schedule-published",
   SHIFT_ASSIGNED: "shift-assigned",
+  SHIFT_UNASSIGNED: "shift-unassigned",
   SHIFT_EDITED: "shift-edited",
   SWAP_REQUESTED: "swap-requested",
   SWAP_APPROVED: "swap-approved",
@@ -73,6 +74,13 @@ export interface ShiftEditedPayload {
   updatedAt: string; // ISO
 }
 
+export interface ShiftUnassignedPayload {
+  assignmentId: string;
+  shiftId: string;
+  userId: string;
+  locationId: string;
+}
+
 // =============================================================================
 // BROADCAST HELPERS
 // =============================================================================
@@ -122,6 +130,23 @@ export async function broadcastShiftAssigned(
   await Promise.all([
     pusher.trigger(CHANNELS.user(userId), PUSHER_EVENTS.SHIFT_ASSIGNED, fullPayload),
     pusher.trigger(CHANNELS.schedule(locationId), PUSHER_EVENTS.SHIFT_ASSIGNED, fullPayload),
+  ]);
+}
+
+/**
+ * Emit when a staff member is unassigned from a shift.
+ */
+export async function broadcastShiftUnassigned(
+  userId: string,
+  locationId: string,
+  payload: ShiftUnassignedPayload
+): Promise<void> {
+  const pusher = getPusherSafe();
+  if (!pusher) return;
+
+  await Promise.all([
+    pusher.trigger(CHANNELS.user(userId), PUSHER_EVENTS.SHIFT_UNASSIGNED, payload),
+    pusher.trigger(CHANNELS.schedule(locationId), PUSHER_EVENTS.SHIFT_UNASSIGNED, payload),
   ]);
 }
 

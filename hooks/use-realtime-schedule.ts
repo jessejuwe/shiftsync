@@ -7,6 +7,7 @@ import {
   PUSHER_EVENTS,
   type SchedulePublishedPayload,
   type ShiftAssignedPayload,
+  type ShiftUnassignedPayload,
   type ShiftEditedPayload,
   type SwapRequestedPayload,
   type SwapApprovedPayload,
@@ -20,6 +21,7 @@ import {
 export interface RealtimeScheduleCallbacks {
   onSchedulePublished?: (payload: SchedulePublishedPayload) => void;
   onShiftAssigned?: (payload: ShiftAssignedPayload) => void;
+  onShiftUnassigned?: (payload: ShiftUnassignedPayload) => void;
   onShiftEdited?: (payload: ShiftEditedPayload) => void;
   onSwapRequested?: (payload: SwapRequestedPayload) => void;
   onSwapApproved?: (payload: SwapApprovedPayload) => void;
@@ -91,6 +93,12 @@ export function useRealtimeSchedule({
         PUSHER_EVENTS.SHIFT_ASSIGNED,
         (payload: ShiftAssignedPayload) => {
           callbacksRef.current.onShiftAssigned?.(payload);
+        }
+      );
+      ch.bind(
+        PUSHER_EVENTS.SHIFT_UNASSIGNED,
+        (payload: ShiftUnassignedPayload) => {
+          callbacksRef.current.onShiftUnassigned?.(payload);
         }
       );
       ch.bind(

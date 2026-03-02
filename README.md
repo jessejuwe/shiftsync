@@ -64,9 +64,11 @@ shiftsync/
 
 | Scenario | What to show |
 |----------|--------------|
+| **Sunday Night Chaos** | Unassign (×) on shift card frees the slot; assign replacement; real-time refetch |
 | **Simultaneous Assignment** | One succeeds; one gets 409 conflict; staff gets real-time conflict notification (Pusher) |
 | **Overtime Trap** | Real-time projected hours; highlighted staff (amber/red); what-if preview before assign |
 | **Fairness Complaint** | Premium shift chart; hours delta (+/−); equity score; over/under badges |
+| **Regret Swap** | Initiator or receiver cancels via `POST /api/swaps/cancel`; swap → CANCELLED; other party notified |
 
 ---
 
@@ -143,6 +145,14 @@ This section documents how ShiftSync handles ambiguities that were left unspecif
 
 **Implementation:** `Location` has one `timezone` field (e.g. `"America/New_York"`); premium shift detection uses that timezone; for locations spanning boundaries, choose one timezone or split into multiple locations.
 
+### 6. Timezone Tangle: "9am–5pm" availability for staff certified at Pacific and Eastern locations
+
+**Decision:** Availability is per location. "9am–5pm" is interpreted in each location's local time when creating the window.
+
+**Rationale:** A staff member certified at both Pacific and Eastern locations sets availability separately per location. "9am–5pm" at Pacific = 9am–5pm Pacific (stored as UTC). "9am–5pm" at Eastern = 9am–5pm Eastern (different UTC range). This avoids ambiguity: the same phrase means "business hours at that location."
+
+**Implementation:** `AvailabilityWindow` has `locationId`; `startsAt`/`endsAt` stored in UTC. When creating windows, the UI converts "9am–5pm" in the location's IANA timezone to UTC. `checkAvailability` compares shift (UTC) with window (UTC); recurring windows project time-of-day to the shift's date.
+
 ### Summary Table
 
 | Ambiguity | Decision |
@@ -152,11 +162,13 @@ This section documents how ShiftSync handles ambiguities that were left unspecif
 | 1h vs 11h for consecutive days | Both count as one working day |
 | Shift edited after swap approval | Swap remains; only pending swaps cancelled on edit |
 | Location spans timezone boundary | Not supported; one timezone per location |
+| "9am–5pm" for multi-timezone staff | Per-location; interpreted in that location's local time |
 
 ---
 
 ## Concurrency
 
 - **Shift assignment:** `SELECT ... FOR UPDATE` on the user row before creating the assignment, inside a Prisma transaction. Prevents double-booking and race conditions when multiple managers assign the same user.
+- **Shift unassign:** `DELETE /api/shifts/assignments/[id]` atomically cancels pending swap requests that reference the assignment.
 - **Swap requests:** Status transitions validated in domain logic; DB constraints enforce uniqueness.
 - **Real-time:** Pusher broadcasts; clients invalidate/refetch React Query on events.

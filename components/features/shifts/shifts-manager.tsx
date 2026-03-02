@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRealtimeSchedule } from "@/hooks/use-realtime-schedule";
 import { format } from "date-fns";
 import { getWeekRangeISO } from "@/lib/week-utils";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -96,6 +96,22 @@ export function ShiftsManager() {
     },
   });
 
+  const unassignMutation = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const res = await fetch(`/api/shifts/assignments/${assignmentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message ?? "Failed to unassign");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (body: {
       locationId: string;
@@ -149,6 +165,10 @@ export function ShiftsManager() {
         queryClient.refetchQueries({ queryKey: ["shifts"] });
       },
       onShiftAssigned: () => {
+        queryClient.invalidateQueries({ queryKey: ["shifts"] });
+        queryClient.refetchQueries({ queryKey: ["shifts"] });
+      },
+      onShiftUnassigned: () => {
         queryClient.invalidateQueries({ queryKey: ["shifts"] });
         queryClient.refetchQueries({ queryKey: ["shifts"] });
       },
@@ -236,9 +256,28 @@ export function ShiftsManager() {
                   </div>
                 )}
                 {shift.assignments.length > 0 && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Assigned: </span>
-                    {shift.assignments.map((a) => a.user.name).join(", ")}
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                    <span className="text-muted-foreground shrink-0">
+                      Assigned:
+                    </span>
+                    {shift.assignments.map((a) => (
+                      <span
+                        key={a.id}
+                        className="inline-flex items-center gap-0.5 rounded-md bg-muted px-2 py-0.5"
+                      >
+                        {a.user.name}
+                        <button
+                          type="button"
+                          onClick={() => unassignMutation.mutate(a.id)}
+                          disabled={unassignMutation.isPending}
+                          className="ml-0.5 rounded p-0.5 hover:bg-destructive/20 hover:text-destructive disabled:opacity-50"
+                          title="Unassign"
+                          aria-label={`Unassign ${a.user.name}`}
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </span>
+                    ))}
                   </div>
                 )}
                 <Button
