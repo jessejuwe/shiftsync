@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ShiftSync
+
+Shift scheduling and management for multi-location teams. Next.js fullstack app with real-time updates.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
+npx prisma generate
+npx prisma migrate dev
+npx prisma db seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Login Credentials (seed)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Role  | Email                   | Password      |
+| ----- | ----------------------- | ------------- |
+| Admin | `admin@shiftsync.local` | `password123` |
 
-## Learn More
+All seeded users share `password123`.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+shiftsync/
+├── app/
+│   ├── (auth)/                   # Login, register
+│   ├── (dashboard)/              # Protected routes (dashboard, shifts, audit)
+│   └── api/                      # REST API (shifts, staff, locations, overtime, fairness, audit, etc.)
+├── components/
+│   ├── ui/                       # shadcn/ui
+│   └── features/                 # shifts, overtime, fairness, audit
+├── lib/
+│   ├── auth.ts                   # NextAuth
+│   ├── domain/                   # Pure domain logic (fairness, overtime, shift-policy)
+│   └── validations/              # Zod schemas
+├── hooks/                        # use-shifts, use-realtime-schedule, etc.
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.ts
+└── config/
+```
 
-## Deploy on Vercel
+**Conventions:** Timestamps in UTC; overnight shifts use `startsAt`/`endsAt` (e.g. 22:00 → 06:00 next day); `@/` path alias.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Architecture
+
+- **Next.js App Router** – Server components where possible; client for interactivity.
+- **Prisma + PostgreSQL** – ORM with migrations.
+- **NextAuth** – Credentials provider; session-based auth.
+- **Pusher** – Real-time schedule events (shift assigned, edited, published).
+- **Domain logic in `lib/domain/`** – Pure functions for fairness, overtime, shift-policy; no DB calls; testable.
+
+---
+
+## Assumptions
+
+- Week = Monday–Sunday (ISO).
+- Overtime: 40h warning, 48h block; max 12h/day, 6 consecutive days.
+- Premium shifts: Fri/Sat evening (location timezone).
+- Fairness: target 40h/week; equity score from hours + premium distribution.
+- Locations have IANA timezones; shifts stored in UTC.
+
+---
+
+## Known Limitations
+
+- No user registration UI (seed only).
+- Audit trail: admin-only; no retention policy.
+- Consecutive-day calculation uses last 14 days of assignments.
+- Pusher required for real-time; falls back to manual refresh if unconfigured.
+
+---
+
+## Concurrency
+
+- **Shift assignment:** `SELECT ... FOR UPDATE` on the user row before creating the assignment, inside a Prisma transaction. Prevents double-booking and race conditions when multiple managers assign the same user.
+- **Swap requests:** Status transitions validated in domain logic; DB constraints enforce uniqueness.
+- **Real-time:** Pusher broadcasts; clients invalidate/refetch React Query on events.
