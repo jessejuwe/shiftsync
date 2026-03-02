@@ -320,8 +320,22 @@ function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Hours a time range contributes to a specific calendar day (UTC). Splits overnight shifts. */
+function hoursOnDate(range: TimeRange, dateKey: string): number {
+  const dayStart = new Date(dateKey + "T00:00:00.000Z");
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+  const overlapStart =
+    range.startsAt < dayStart ? dayStart : range.startsAt;
+  const overlapEnd = range.endsAt > dayEnd ? dayEnd : range.endsAt;
+  if (overlapStart >= overlapEnd) return 0;
+  return (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60);
+}
+
 /**
  * Check if assigning would exceed max hours in a single day.
+ * Splits overnight shifts across calendar days.
  */
 export function checkDailyHoursLimit(
   shift: PolicyShift,
@@ -332,27 +346,36 @@ export function checkDailyHoursLimit(
 ): ValidationResult | null {
   const { maxDailyHours } = { ...DEFAULT_CONFIG, ...config };
 
-  const shiftDateKey = toDateKey(shift.startsAt);
-  const assignmentsOnSameDay = userAssignments.filter(
-    (a) =>
-      a.id !== excludeAssignmentId &&
-      toDateKey(a.startsAt) === shiftDateKey
-  );
+  const startKey = toDateKey(shift.startsAt);
+  const endKey = toDateKey(shift.endsAt);
+  const dateKeys = startKey === endKey ? [startKey] : [startKey, endKey];
 
-  const existingHours = assignmentsOnSameDay.reduce(
-    (sum, a) => sum + hoursInRange({ startsAt: a.startsAt, endsAt: a.endsAt }),
-    0
-  );
-  const shiftHours = hoursInRange({ startsAt: shift.startsAt, endsAt: shift.endsAt });
-  const totalDailyHours = existingHours + shiftHours;
+  for (const dateKey of dateKeys) {
+    const existingHours = userAssignments
+      .filter((a) => a.id !== excludeAssignmentId)
+      .filter(
+        (a) =>
+          toDateKey(a.startsAt) === dateKey || toDateKey(a.endsAt) === dateKey
+      )
+      .reduce(
+        (sum, a) =>
+          sum + hoursOnDate({ startsAt: a.startsAt, endsAt: a.endsAt }, dateKey),
+        0
+      );
+    const shiftHoursOnDay = hoursOnDate(
+      { startsAt: shift.startsAt, endsAt: shift.endsAt },
+      dateKey
+    );
+    const totalDailyHours = existingHours + shiftHoursOnDay;
 
-  if (totalDailyHours > maxDailyHours) {
-    return {
-      type: "block",
-      code: "DAILY_HOURS_EXCEEDED",
-      message: `Assignment would exceed ${maxDailyHours}h/day (${totalDailyHours.toFixed(1)}h on ${shiftDateKey}).`,
-      suggestions: alternativeUsers,
-    };
+    if (totalDailyHours > maxDailyHours) {
+      return {
+        type: "block",
+        code: "DAILY_HOURS_EXCEEDED",
+        message: `Assignment would exceed ${maxDailyHours}h/day (${totalDailyHours.toFixed(1)}h on ${dateKey}).`,
+        suggestions: alternativeUsers,
+      };
+    }
   }
 
   return null;
@@ -402,6 +425,9 @@ export function checkConsecutiveDays(
   const dateKeys = new Set<string>();
   for (const a of allAssignments) {
     dateKeys.add(toDateKey(a.startsAt));
+    if (toDateKey(a.endsAt) !== toDateKey(a.startsAt)) {
+      dateKeys.add(toDateKey(a.endsAt));
+    }
   }
   const sortedDates = Array.from(dateKeys).sort();
 
@@ -413,9 +439,13 @@ export function checkConsecutiveDays(
     if (prevDate === null) {
       current = 1;
     } else {
-      const prev = new Date(prevDate);
-      const curr = new Date(d);
-      const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+      const prevDays = Math.floor(
+        new Date(prevDate + "T12:00:00.000Z").getTime() / 86400000
+      );
+      const currDays = Math.floor(
+        new Date(d + "T12:00:00.000Z").getTime() / 86400000
+      );
+      const diffDays = currDays - prevDays;
       if (diffDays === 1) {
         current += 1;
       } else {

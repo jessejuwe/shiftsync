@@ -49,6 +49,19 @@ function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Hours a time range contributes to a specific calendar day (UTC). Splits overnight shifts. */
+function hoursOnDate(range: TimeRange, dateKey: string): number {
+  const dayStart = new Date(dateKey + "T00:00:00.000Z");
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+  const overlapStart =
+    range.startsAt < dayStart ? dayStart : range.startsAt;
+  const overlapEnd = range.endsAt > dayEnd ? dayEnd : range.endsAt;
+  if (overlapStart >= overlapEnd) return 0;
+  return (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60);
+}
+
 function getWeekStart(d: Date): Date {
   const date = new Date(d);
   const day = date.getUTCDay();
@@ -137,6 +150,7 @@ export function calculateProjectedWeeklyHours(
 
 /**
  * Calculate total hours on a specific day for a user's assignments.
+ * Splits overnight shifts across calendar days.
  */
 export function calculateDailyHours(
   assignments: AssignmentLike[],
@@ -146,35 +160,54 @@ export function calculateDailyHours(
   const dateKey = toDateKey(date);
 
   return assignments
+    .filter((a) => a.id !== excludeAssignmentId)
     .filter(
       (a) =>
-        a.id !== excludeAssignmentId && toDateKey(a.startsAt) === dateKey
+        toDateKey(a.startsAt) === dateKey || toDateKey(a.endsAt) === dateKey
     )
-    .reduce((sum, a) => sum + hoursInRange(a), 0);
+    .reduce((sum, a) => sum + hoursOnDate(a, dateKey), 0);
 }
 
 /**
  * Calculate projected daily hours if a proposed shift were added.
+ * Splits overnight shifts across calendar days. Returns max across days the shift touches.
  */
 export function calculateProjectedDailyHours(
   assignments: AssignmentLike[],
   proposedShift: TimeRange,
   excludeAssignmentId?: string
 ): { currentHours: number; shiftHours: number; projectedHours: number } {
-  const shiftDateKey = toDateKey(proposedShift.startsAt);
-  const assignmentsOnDay = assignments.filter(
-    (a) =>
-      a.id !== excludeAssignmentId && toDateKey(a.startsAt) === shiftDateKey
-  );
+  const startKey = toDateKey(proposedShift.startsAt);
+  const endKey = toDateKey(proposedShift.endsAt);
+  const dateKeys =
+    startKey === endKey ? [startKey] : [startKey, endKey];
 
-  const currentHours = assignmentsOnDay.reduce(
-    (sum, a) => sum + hoursInRange(a),
-    0
-  );
-  const shiftHours = hoursInRange(proposedShift);
-  const projectedHours = currentHours + shiftHours;
+  let maxProjected = 0;
+  let maxCurrent = 0;
+  let maxShift = 0;
 
-  return { currentHours, shiftHours, projectedHours };
+  for (const dateKey of dateKeys) {
+    const currentHours = assignments
+      .filter((a) => a.id !== excludeAssignmentId)
+      .filter(
+        (a) =>
+          toDateKey(a.startsAt) === dateKey || toDateKey(a.endsAt) === dateKey
+      )
+      .reduce((sum, a) => sum + hoursOnDate(a, dateKey), 0);
+    const shiftHours = hoursOnDate(proposedShift, dateKey);
+    const projectedHours = currentHours + shiftHours;
+    if (projectedHours > maxProjected) {
+      maxProjected = projectedHours;
+      maxCurrent = currentHours;
+      maxShift = shiftHours;
+    }
+  }
+
+  return {
+    currentHours: maxCurrent,
+    shiftHours: maxShift,
+    projectedHours: maxProjected,
+  };
 }
 
 /**
@@ -189,6 +222,9 @@ export function calculateConsecutiveDaysCurrent(
   const dateKeys = new Set<string>();
   for (const a of assignments) {
     dateKeys.add(toDateKey(a.startsAt));
+    if (toDateKey(a.endsAt) !== toDateKey(a.startsAt)) {
+      dateKeys.add(toDateKey(a.endsAt));
+    }
   }
   const sortedDates = Array.from(dateKeys).sort();
 
@@ -200,11 +236,13 @@ export function calculateConsecutiveDaysCurrent(
     if (prevDate === null) {
       current = 1;
     } else {
-      const prev = new Date(prevDate);
-      const curr = new Date(d);
-      const diffDays = Math.round(
-        (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
+      const prevDays = Math.floor(
+        new Date(prevDate + "T12:00:00.000Z").getTime() / 86400000
       );
+      const currDays = Math.floor(
+        new Date(d + "T12:00:00.000Z").getTime() / 86400000
+      );
+      const diffDays = currDays - prevDays;
       if (diffDays === 1) {
         current += 1;
       } else {
@@ -253,6 +291,9 @@ export function calculateConsecutiveDays(
   const dateKeys = new Set<string>();
   for (const a of allAssignments) {
     dateKeys.add(toDateKey(a.startsAt));
+    if (toDateKey(a.endsAt) !== toDateKey(a.startsAt)) {
+      dateKeys.add(toDateKey(a.endsAt));
+    }
   }
   const sortedDates = Array.from(dateKeys).sort();
 
@@ -264,11 +305,13 @@ export function calculateConsecutiveDays(
     if (prevDate === null) {
       current = 1;
     } else {
-      const prev = new Date(prevDate);
-      const curr = new Date(d);
-      const diffDays = Math.round(
-        (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
+      const prevDays = Math.floor(
+        new Date(prevDate + "T12:00:00.000Z").getTime() / 86400000
       );
+      const currDays = Math.floor(
+        new Date(d + "T12:00:00.000Z").getTime() / 86400000
+      );
+      const diffDays = currDays - prevDays;
       if (diffDays === 1) {
         current += 1;
       } else {

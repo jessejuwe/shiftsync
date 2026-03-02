@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRealtimeSchedule } from "@/hooks/use-realtime-schedule";
-import { format, addWeeks, subWeeks } from "date-fns";
+import { format } from "date-fns";
+import { getWeekRangeISO } from "@/lib/week-utils";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { ShiftCreateForm } from "./shift-create-form";
 import { StaffSelectModal } from "./staff-select-modal";
+import { getQueryClient } from "@/app/get-query-client";
 
 interface Shift {
   id: string;
@@ -27,7 +29,12 @@ interface Shift {
   notes: string | null;
   isPublished: boolean;
   requiredSkills: { id: string; name: string }[];
-  assignments: { id: string; userId: string; user: { id: string; name: string; email: string }; status: string }[];
+  assignments: {
+    id: string;
+    userId: string;
+    user: { id: string; name: string; email: string };
+    status: string;
+  }[];
 }
 
 interface Location {
@@ -43,31 +50,12 @@ interface Skill {
   description: string | null;
 }
 
-function getWeekRange(weekOffset = 0) {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  let monday = new Date(now);
-  monday.setDate(diff);
-  monday.setHours(0, 0, 0, 0);
-  if (weekOffset !== 0) {
-    monday = weekOffset > 0 ? addWeeks(monday, weekOffset) : subWeeks(monday, -weekOffset);
-  }
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-  return {
-    from: monday.toISOString(),
-    to: sunday.toISOString(),
-    monday,
-    sunday,
-  };
-}
-
 export function ShiftsManager() {
-  const queryClient = useQueryClient();
+  const queryClient = getQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
-  const { from, to, monday, sunday } = getWeekRange(weekOffset);
+  const { from, to } = getWeekRangeISO(weekOffset);
+  const monday = new Date(from);
+  const sunday = new Date(to);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [staffModalShift, setStaffModalShift] = useState<{
@@ -79,7 +67,12 @@ export function ShiftsManager() {
   const { data: shiftsData, isLoading } = useQuery({
     queryKey: ["shifts", from, to],
     queryFn: async () => {
-      const res = await fetch("/api/shifts?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to));
+      const res = await fetch(
+        "/api/shifts?from=" +
+          encodeURIComponent(from) +
+          "&to=" +
+          encodeURIComponent(to),
+      );
       if (!res.ok) throw new Error("Failed to fetch shifts");
       return res.json();
     },
@@ -129,7 +122,8 @@ export function ShiftsManager() {
       setStaffModalShift({
         id: data.shift.id,
         locationId: data.shift.locationId,
-        requiredSkillIds: data.shift.requiredSkills?.map((s: { id: string }) => s.id) ?? [],
+        requiredSkillIds:
+          data.shift.requiredSkills?.map((s: { id: string }) => s.id) ?? [],
       });
     },
   });
@@ -138,16 +132,30 @@ export function ShiftsManager() {
   const locations: Location[] = locationsData?.locations ?? [];
   const skills: Skill[] = skillsData?.skills ?? [];
   const locationIds = useMemo(
-    () => [...new Set([...locations.map((l) => l.id), ...shifts.map((s) => s.locationId)])],
-    [locations, shifts]
+    () => [
+      ...new Set([
+        ...locations.map((l) => l.id),
+        ...shifts.map((s) => s.locationId),
+      ]),
+    ],
+    [locations, shifts],
   );
 
   useRealtimeSchedule({
     locationIds,
     callbacks: {
-      onSchedulePublished: () => queryClient.invalidateQueries({ queryKey: ["shifts"] }),
-      onShiftAssigned: () => queryClient.invalidateQueries({ queryKey: ["shifts"] }),
-      onShiftEdited: () => queryClient.invalidateQueries({ queryKey: ["shifts"] }),
+      onSchedulePublished: () => {
+        queryClient.invalidateQueries({ queryKey: ["shifts"] });
+        queryClient.refetchQueries({ queryKey: ["shifts"] });
+      },
+      onShiftAssigned: () => {
+        queryClient.invalidateQueries({ queryKey: ["shifts"] });
+        queryClient.refetchQueries({ queryKey: ["shifts"] });
+      },
+      onShiftEdited: () => {
+        queryClient.invalidateQueries({ queryKey: ["shifts"] });
+        queryClient.refetchQueries({ queryKey: ["shifts"] });
+      },
     },
   });
 
@@ -204,12 +212,18 @@ export function ShiftsManager() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {shifts.map((shift) => (
-            <Card key={shift.id} className="overflow-hidden transition-shadow hover:shadow-md">
+            <Card
+              key={shift.id}
+              className="overflow-hidden transition-shadow hover:shadow-md"
+            >
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">
-                  {format(new Date(shift.startsAt), "MMM d, HH:mm")} – {format(new Date(shift.endsAt), "HH:mm")}
+                  {format(new Date(shift.startsAt), "MMM d, HH:mm")} –{" "}
+                  {format(new Date(shift.endsAt), "HH:mm")}
                 </CardTitle>
-                <p className="text-muted-foreground text-sm">{shift.location.name}</p>
+                <p className="text-muted-foreground text-sm">
+                  {shift.location.name}
+                </p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {shift.requiredSkills.length > 0 && (
@@ -266,7 +280,9 @@ export function ShiftsManager() {
                 endsAt: values.endsAt,
                 title: values.title || undefined,
                 notes: values.notes || undefined,
-                requiredSkillIds: values.requiredSkillIds?.length ? values.requiredSkillIds : undefined,
+                requiredSkillIds: values.requiredSkillIds?.length
+                  ? values.requiredSkillIds
+                  : undefined,
               });
             }}
             onSuccess={() => {}}

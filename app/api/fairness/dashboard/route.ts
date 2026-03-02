@@ -18,18 +18,23 @@ function getWeekStart(d: Date): Date {
   return date;
 }
 
-function toAssignmentLike(a: {
-  id: string;
-  shiftId: string;
-  userId: string;
-  shift: { startsAt: Date; endsAt: Date };
-}): AssignmentLike {
+function toAssignmentLike(
+  a: {
+    id: string;
+    shiftId: string;
+    userId: string;
+    shift: { startsAt: Date; endsAt: Date; location?: { timezone: string } | null };
+  },
+  defaultTimezone?: string
+): AssignmentLike {
+  const timezone = a.shift.location?.timezone ?? defaultTimezone;
   return {
     id: a.id,
     shiftId: a.shiftId,
     userId: a.userId,
     startsAt: a.shift.startsAt,
     endsAt: a.shift.endsAt,
+    ...(timezone && { timezone }),
   };
 }
 
@@ -71,16 +76,32 @@ export async function GET(request: NextRequest) {
             startsAt: { gte: weekStart, lte: weekEnd },
           },
         },
-        include: { shift: { select: { startsAt: true, endsAt: true } } },
+        include: {
+          shift: {
+            select: {
+              startsAt: true,
+              endsAt: true,
+              location: { select: { timezone: true } },
+            },
+          },
+        },
       });
       return { userId: s.id, assignments, staff: s };
     })
   );
 
+  const locations = locationId
+    ? await prisma.location.findUnique({
+        where: { id: locationId },
+        select: { timezone: true },
+      })
+    : null;
+  const defaultTimezone = locations?.timezone;
+
   const flatAssignments: AssignmentLike[] = [];
   for (const { userId, assignments } of allAssignments) {
     for (const a of assignments) {
-      flatAssignments.push(toAssignmentLike(a));
+      flatAssignments.push(toAssignmentLike(a, defaultTimezone));
     }
   }
 

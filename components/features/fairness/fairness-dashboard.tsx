@@ -1,15 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, addWeeks, subWeeks } from "date-fns";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useRealtimeSchedule } from "@/hooks/use-realtime-schedule";
+import { format } from "date-fns";
+import { getWeekRangeISO } from "@/lib/week-utils";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChevronLeft, ChevronRight, Scale, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { getQueryClient } from "@/app/get-query-client";
 
 interface StaffFairness {
   userId: string;
@@ -57,20 +54,6 @@ interface FairnessDashboardData {
   staff: StaffFairness[];
 }
 
-function getWeekRange(weekOffset = 0) {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  let monday = new Date(now);
-  monday.setDate(diff);
-  monday.setHours(0, 0, 0, 0);
-  if (weekOffset !== 0) {
-    monday =
-      weekOffset > 0 ? addWeeks(monday, weekOffset) : subWeeks(monday, -weekOffset);
-  }
-  return monday.toISOString();
-}
-
 const hoursChartConfig = {
   hours: {
     label: "Hours",
@@ -90,10 +73,11 @@ const premiumChartConfig = {
 } satisfies ChartConfig;
 
 export function FairnessDashboard() {
+  const queryClient = getQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
   const [locationId, setLocationId] = useState<string>("");
 
-  const weekStart = getWeekRange(weekOffset);
+  const { weekStart } = getWeekRangeISO(weekOffset);
 
   const { data: locationsData } = useQuery({
     queryKey: ["locations"],
@@ -117,6 +101,29 @@ export function FairnessDashboard() {
 
   const locations: { id: string; name: string }[] =
     locationsData?.locations ?? [];
+  const locationIds = useMemo(
+    () => (locationId ? [locationId] : locations.map((l) => l.id)),
+    [locationId, locations],
+  );
+
+  useRealtimeSchedule({
+    locationIds,
+    callbacks: {
+      onSchedulePublished: () => {
+        queryClient.invalidateQueries({ queryKey: ["fairness-dashboard"] });
+        queryClient.refetchQueries({ queryKey: ["fairness-dashboard"] });
+      },
+      onShiftAssigned: () => {
+        queryClient.invalidateQueries({ queryKey: ["fairness-dashboard"] });
+        queryClient.refetchQueries({ queryKey: ["fairness-dashboard"] });
+      },
+      onShiftEdited: () => {
+        queryClient.invalidateQueries({ queryKey: ["fairness-dashboard"] });
+        queryClient.refetchQueries({ queryKey: ["fairness-dashboard"] });
+      },
+    },
+  });
+
   const staff = data?.staff ?? [];
   const targetHours = data?.targetHours ?? 40;
   const weekStartDate = data?.weekStart
@@ -172,7 +179,8 @@ export function FairnessDashboard() {
               <ChevronLeft className="size-4" />
             </Button>
             <span className="min-w-[180px] px-2 text-center text-sm">
-              {format(weekStartDate, "MMM d")} – {format(weekEndDate, "MMM d, yyyy")}
+              {format(weekStartDate, "MMM d")} –{" "}
+              {format(weekEndDate, "MMM d, yyyy")}
             </span>
             <Button
               variant="ghost"
@@ -204,12 +212,15 @@ export function FairnessDashboard() {
                   Hours per staff
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
-                  Target: {targetHours}h • Green = on target, Red = over, Amber =
-                  under
+                  Target: {targetHours}h • Green = on target, Red = over, Amber
+                  = under
                 </p>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={hoursChartConfig} className="min-h-[280px] w-full">
+                <ChartContainer
+                  config={hoursChartConfig}
+                  className="min-h-[280px] w-full"
+                >
                   <BarChart
                     accessibilityLayer
                     data={hoursChartData}
@@ -260,7 +271,10 @@ export function FairnessDashboard() {
                 </p>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={premiumChartConfig} className="min-h-[280px] w-full">
+                <ChartContainer
+                  config={premiumChartConfig}
+                  className="min-h-[280px] w-full"
+                >
                   <BarChart
                     accessibilityLayer
                     data={hoursChartData}
@@ -305,8 +319,8 @@ export function FairnessDashboard() {
             <CardHeader>
               <CardTitle>Staff fairness summary</CardTitle>
               <p className="text-muted-foreground text-sm">
-                Over-scheduled (red) = +2h above target • Under-scheduled (amber)
-                = -2h below target
+                Over-scheduled (red) = +2h above target • Under-scheduled
+                (amber) = -2h below target
               </p>
             </CardHeader>
             <CardContent>
@@ -347,9 +361,10 @@ export function FairnessDashboard() {
                         <TableCell
                           className={cn(
                             "text-right font-mono font-medium",
-                            s.hoursDelta > 0 && "text-red-600 dark:text-red-400",
+                            s.hoursDelta > 0 &&
+                              "text-red-600 dark:text-red-400",
                             s.hoursDelta < 0 &&
-                              "text-amber-700 dark:text-amber-400"
+                              "text-amber-700 dark:text-amber-400",
                           )}
                         >
                           {s.hoursDelta >= 0 ? "+" : ""}
@@ -362,8 +377,10 @@ export function FairnessDashboard() {
                           <span
                             className={cn(
                               "font-medium",
-                              s.equityScore >= 70 && "text-green-600 dark:text-green-400",
-                              s.equityScore < 50 && "text-amber-700 dark:text-amber-400"
+                              s.equityScore >= 70 &&
+                                "text-green-600 dark:text-green-400",
+                              s.equityScore < 50 &&
+                                "text-amber-700 dark:text-amber-400",
                             )}
                           >
                             {s.equityScore}
@@ -372,10 +389,7 @@ export function FairnessDashboard() {
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {s.isOverScheduled && (
-                              <Badge
-                                variant="destructive"
-                                className="text-xs"
-                              >
+                              <Badge variant="destructive" className="text-xs">
                                 Over
                               </Badge>
                             )}

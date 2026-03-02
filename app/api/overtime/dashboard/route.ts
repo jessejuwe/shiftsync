@@ -58,14 +58,18 @@ export async function GET(request: NextRequest) {
     orderBy: { name: "asc" },
   });
 
+  const consecutiveCutoff = new Date(weekStart);
+  consecutiveCutoff.setUTCDate(consecutiveCutoff.getUTCDate() - 14);
+
   const allStaffAssignments = await Promise.all(
     staff.map(async (s) => {
       const assignments = await prisma.shiftAssignment.findMany({
         where: {
           userId: s.id,
-          ...(locationId && {
-            shift: { locationId },
-          }),
+          shift: {
+            ...(locationId && { locationId }),
+            endsAt: { gte: consecutiveCutoff },
+          },
         },
         include: { shift: { select: { startsAt: true, endsAt: true } } },
       });

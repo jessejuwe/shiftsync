@@ -17,6 +17,8 @@ export interface AssignmentLike extends TimeRange {
   id: string;
   shiftId: string;
   userId: string;
+  /** IANA timezone (e.g. America/New_York) for premium shift evaluation in location local time */
+  timezone?: string;
 }
 
 export interface StaffFairnessInput {
@@ -47,8 +49,30 @@ function hoursInRange(range: TimeRange): number {
   return (range.endsAt.getTime() - range.startsAt.getTime()) / (1000 * 60 * 60);
 }
 
+function getLocalDayAndHour(date: Date, timezone: string): { day: number; hour: number } {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "long",
+    hour: "numeric",
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(date);
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "Sunday";
+  const hour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const dayMap: Record<string, number> = {
+    Sunday: 0,
+    Monday: 1,
+    Tuesday: 2,
+    Wednesday: 3,
+    Thursday: 4,
+    Friday: 5,
+    Saturday: 6,
+  };
+  return { day: dayMap[weekday] ?? 0, hour };
+}
+
 function isPremiumShift(
-  range: TimeRange,
+  range: TimeRange & { timezone?: string },
   config: Partial<FairnessConfig> = {}
 ): boolean {
   const { premiumDays, premiumEveningStartHour } = {
@@ -56,12 +80,18 @@ function isPremiumShift(
     ...config,
   };
 
-  const day = range.startsAt.getUTCDay();
-  const hour = range.startsAt.getUTCHours();
+  let day: number;
+  let hour: number;
+  if (range.timezone) {
+    const local = getLocalDayAndHour(range.startsAt, range.timezone);
+    day = local.day;
+    hour = local.hour;
+  } else {
+    day = range.startsAt.getUTCDay();
+    hour = range.startsAt.getUTCHours();
+  }
 
-  return (
-    premiumDays.includes(day) && hour >= premiumEveningStartHour
-  );
+  return premiumDays.includes(day) && hour >= premiumEveningStartHour;
 }
 
 // =============================================================================

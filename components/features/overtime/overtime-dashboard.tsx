@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, addWeeks, subWeeks } from "date-fns";
-import { ChevronLeft, ChevronRight, Clock, AlertTriangle, Calendar } from "lucide-react";
+import { useRealtimeSchedule } from "@/hooks/use-realtime-schedule";
+import { format } from "date-fns";
+import { getWeekRangeISO } from "@/lib/week-utils";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  AlertTriangle,
+  Calendar,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -23,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { getQueryClient } from "@/app/get-query-client";
 
 interface StaffHours {
   userId: string;
@@ -43,25 +52,12 @@ interface OvertimeDashboardData {
   staff: StaffHours[];
 }
 
-function getWeekRange(weekOffset = 0) {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  let monday = new Date(now);
-  monday.setDate(diff);
-  monday.setHours(0, 0, 0, 0);
-  if (weekOffset !== 0) {
-    monday =
-      weekOffset > 0 ? addWeeks(monday, weekOffset) : subWeeks(monday, -weekOffset);
-  }
-  return monday.toISOString();
-}
-
 export function OvertimeDashboard() {
+  const queryClient = getQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
   const [locationId, setLocationId] = useState<string>("");
 
-  const weekStart = getWeekRange(weekOffset);
+  const { weekStart } = getWeekRangeISO(weekOffset);
 
   const { data: locationsData } = useQuery({
     queryKey: ["locations"],
@@ -85,6 +81,29 @@ export function OvertimeDashboard() {
 
   const locations: { id: string; name: string }[] =
     locationsData?.locations ?? [];
+  const locationIds = useMemo(
+    () => (locationId ? [locationId] : locations.map((l) => l.id)),
+    [locationId, locations],
+  );
+
+  useRealtimeSchedule({
+    locationIds,
+    callbacks: {
+      onSchedulePublished: () => {
+        queryClient.invalidateQueries({ queryKey: ["overtime-dashboard"] });
+        queryClient.refetchQueries({ queryKey: ["overtime-dashboard"] });
+      },
+      onShiftAssigned: () => {
+        queryClient.invalidateQueries({ queryKey: ["overtime-dashboard"] });
+        queryClient.refetchQueries({ queryKey: ["overtime-dashboard"] });
+      },
+      onShiftEdited: () => {
+        queryClient.invalidateQueries({ queryKey: ["overtime-dashboard"] });
+        queryClient.refetchQueries({ queryKey: ["overtime-dashboard"] });
+      },
+    },
+  });
+
   const staff = data?.staff ?? [];
   const weekStartDate = data?.weekStart
     ? new Date(data.weekStart)
@@ -131,7 +150,8 @@ export function OvertimeDashboard() {
               <ChevronLeft className="size-4" />
             </Button>
             <span className="min-w-[180px] px-2 text-center text-sm">
-              {format(weekStartDate, "MMM d")} – {format(weekEndDate, "MMM d, yyyy")}
+              {format(weekStartDate, "MMM d")} –{" "}
+              {format(weekEndDate, "MMM d, yyyy")}
             </span>
             <Button
               variant="ghost"
@@ -174,14 +194,13 @@ export function OvertimeDashboard() {
               </TableHeader>
               <TableBody>
                 {staff.map((s) => {
-                  const rowHighlight =
-                    s.overOvertime
-                      ? "bg-red-50 dark:bg-red-950/20 border-l-4 border-l-red-500"
-                      : s.approachingOvertime
-                        ? "bg-amber-50 dark:bg-amber-950/20 border-l-4 border-l-amber-500"
-                        : s.is6thConsecutiveDay
-                          ? "bg-amber-50/70 dark:bg-amber-950/15 border-l-4 border-l-amber-400"
-                          : "";
+                  const rowHighlight = s.overOvertime
+                    ? "bg-red-50 dark:bg-red-950/20 border-l-4 border-l-red-500"
+                    : s.approachingOvertime
+                      ? "bg-amber-50 dark:bg-amber-950/20 border-l-4 border-l-amber-500"
+                      : s.is6thConsecutiveDay
+                        ? "bg-amber-50/70 dark:bg-amber-950/15 border-l-4 border-l-amber-400"
+                        : "";
                   return (
                     <TableRow
                       key={s.userId}
@@ -202,7 +221,7 @@ export function OvertimeDashboard() {
                             s.overOvertime && "text-red-600 dark:text-red-400",
                             s.approachingOvertime &&
                               !s.overOvertime &&
-                              "text-amber-700 dark:text-amber-400"
+                              "text-amber-700 dark:text-amber-400",
                           )}
                         >
                           {s.hoursThisWeek}h
@@ -211,9 +230,10 @@ export function OvertimeDashboard() {
                       <TableCell className="text-right">
                         <span
                           className={cn(
-                            s.is6thConsecutiveDay && "font-semibold text-amber-700 dark:text-amber-400",
+                            s.is6thConsecutiveDay &&
+                              "font-semibold text-amber-700 dark:text-amber-400",
                             s.is7thOrMoreConsecutiveDay &&
-                              "font-semibold text-red-600 dark:text-red-400"
+                              "font-semibold text-red-600 dark:text-red-400",
                           )}
                         >
                           {s.consecutiveDays}
