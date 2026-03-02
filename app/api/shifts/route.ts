@@ -45,16 +45,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const location = await prisma.location.findUnique({ where: { id: locationId } });
-  if (!location) {
-    return NextResponse.json(
-      { code: "NOT_FOUND", message: "Location not found" },
-      { status: 404 }
-    );
-  }
-
   try {
-    const shift = await prisma.shift.create({
+    const shift = await prisma.$transaction(async (tx) => {
+      const location = await tx.location.findUnique({ where: { id: locationId } });
+      if (!location) {
+        throw new Error("LOCATION_NOT_FOUND");
+      }
+
+      return tx.shift.create({
       data: {
         locationId,
         startsAt: startsAtDate,
@@ -70,6 +68,7 @@ export async function POST(request: NextRequest) {
         location: { select: { id: true, name: true, timezone: true } },
         requiredSkills: { include: { skill: { select: { id: true, name: true } } } },
       },
+    });
     });
 
     return NextResponse.json(
@@ -92,6 +91,13 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg === "LOCATION_NOT_FOUND") {
+      return NextResponse.json(
+        { code: "NOT_FOUND", message: "Location not found" },
+        { status: 404 }
+      );
+    }
     console.error("Shift create error:", err);
     return NextResponse.json(
       { code: "INTERNAL_ERROR", message: "Failed to create shift" },

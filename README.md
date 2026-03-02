@@ -50,6 +50,26 @@ shiftsync/
 
 ---
 
+## Golden Rules
+
+1. **Fail loudly** – Validation returns typed codes and clear messages; never silent failures.
+2. **Transactional** – Every state change runs inside `prisma.$transaction`.
+3. **Logic outside routes** – Business logic in `lib/domain/`; routes orchestrate only.
+4. **UTC timestamps** – All stored in UTC; convert to location timezone for display.
+5. **Validate inside transaction** – Validation after lock/fresh read, not before.
+
+---
+
+## Winning Scenarios
+
+| Scenario | What to show |
+|----------|--------------|
+| **Simultaneous Assignment** | One succeeds; one gets 409 conflict; staff gets real-time conflict notification (Pusher) |
+| **Overtime Trap** | Real-time projected hours; highlighted staff (amber/red); what-if preview before assign |
+| **Fairness Complaint** | Premium shift chart; hours delta (+/−); equity score; over/under badges |
+
+---
+
 ## Architecture
 
 - **Next.js App Router** – Server components where possible; client for interactivity.
