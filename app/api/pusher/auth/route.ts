@@ -5,7 +5,9 @@ import { getPusherServer } from "@/lib/pusher";
 /**
  * Pusher private channel auth.
  * POST with socket_id and channel_name (form-urlencoded or JSON).
- * Verify user can access private-user-${userId} channels.
+ * Validates access for:
+ * - private-user-${userId}: only that user
+ * - private-schedule-${locationId}: any authenticated user
  */
 export async function POST(request: NextRequest) {
   let pusher;
@@ -45,17 +47,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Private user channel: private-user-${userId}
+  const session = await auth();
+
+  // Private user channel: private-user-${userId} — only that user
   if (channel_name.startsWith("private-user-")) {
     const channelUserId = channel_name.replace("private-user-", "");
-    const session = await auth();
-
     if (!session?.user?.id || session.user.id !== channelUserId) {
       return NextResponse.json(
         { error: "Unauthorized to subscribe to this channel" },
         { status: 403 }
       );
     }
+  }
+  // Private schedule channel: private-schedule-${locationId} — any authenticated user
+  else if (channel_name.startsWith("private-schedule-")) {
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized to subscribe to this channel" },
+        { status: 403 }
+      );
+    }
+  }
+  // Unknown channel type — reject
+  else {
+    return NextResponse.json(
+      { error: "Unknown channel type" },
+      { status: 403 }
+    );
   }
 
   try {

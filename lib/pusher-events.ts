@@ -10,7 +10,7 @@ import { getPusherServer } from "./pusher";
 // =============================================================================
 
 export const CHANNELS = {
-  schedule: (locationId: string) => `schedule-${locationId}`,
+  schedule: (locationId: string) => `private-schedule-${locationId}`,
   user: (userId: string) => `private-user-${userId}`,
 } as const;
 

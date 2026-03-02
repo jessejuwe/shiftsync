@@ -42,7 +42,7 @@ export interface UseRealtimeScheduleOptions {
 
 /**
  * Subscribe to real-time schedule events via Pusher.
- * - schedule-${locationId}: schedule published, shift assigned, shift edited
+ * - private-schedule-${locationId}: schedule published, shift assigned, shift edited (auth required)
  * - private-user-${userId}: swap requested, swap approved, assignment conflict
  */
 export function useRealtimeSchedule({

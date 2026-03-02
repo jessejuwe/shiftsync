@@ -25,27 +25,28 @@ export function LoginForm({ callbackUrl = "/", error }: LoginFormProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsPending(true);
-    const formData = new FormData(e.currentTarget);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const result = await signIn("credentials", {
+        email: formData.get("email") as string,
+        password: formData.get("password") as string,
+        redirect: false,
+        callbackUrl,
+      });
 
-    const result = await signIn("credentials", {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-      redirect: false,
-      callbackUrl,
-    });
-
-    setIsPending(false);
-
-    if (result?.error) {
-      router.push(
-        `/login?error=CredentialsSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`
-      );
-      router.refresh();
-      return;
-    }
-    if (result?.ok) {
-      router.push(callbackUrl);
-      router.refresh();
+      if (result?.error) {
+        router.push(
+          `/login?error=CredentialsSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`
+        );
+        router.refresh();
+        return;
+      }
+      if (result?.ok) {
+        router.push(callbackUrl);
+        router.refresh();
+      }
+    } finally {
+      setIsPending(false);
     }
   };
 
