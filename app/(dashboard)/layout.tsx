@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { CalendarDays, FileText, LayoutDashboard } from "lucide-react";
+import { CalendarDays, FileText, LayoutDashboard, Clock } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -52,6 +52,14 @@ export default function DashboardLayout({
                   <Link href="/shifts">
                     <CalendarDays />
                     <span>Shifts</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/availability"}>
+                  <Link href="/availability">
+                    <Clock />
+                    <span>Availability</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
