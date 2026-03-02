@@ -100,9 +100,7 @@ export function AvailabilityManager() {
   const isAdminOrManager = role === "ADMIN" || role === "MANAGER";
 
   if (status === "loading") {
-    return (
-      <p className="text-muted-foreground text-sm">Loading…</p>
-    );
+    return <p className="text-muted-foreground text-sm">Loading…</p>;
   }
 
   if (isAdminOrManager) {
@@ -221,7 +219,9 @@ function MyAvailabilityForm() {
       toast.success("Availability added");
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to add availability");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to add availability",
+      );
     },
   });
 
@@ -257,7 +257,9 @@ function MyAvailabilityForm() {
       toast.success("Availability updated");
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to update availability");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update availability",
+      );
     },
   });
 
@@ -275,22 +277,23 @@ function MyAvailabilityForm() {
       toast.success("Availability removed");
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to remove availability");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to remove availability",
+      );
     },
   });
 
   const windows: AvailabilityWindow[] = windowsData?.windows ?? [];
   const locations: Location[] = locationsData?.locations ?? [];
 
-  const groupedByLocation = windows.reduce<Record<string, AvailabilityWindow[]>>(
-    (acc, w) => {
-      const key = w.locationId;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(w);
-      return acc;
-    },
-    {}
-  );
+  const groupedByLocation = windows.reduce<
+    Record<string, AvailabilityWindow[]>
+  >((acc, w) => {
+    const key = w.locationId;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(w);
+    return acc;
+  }, {});
 
   function openEdit(w: AvailabilityWindow) {
     if (!w.isRecurring || w.dayOfWeek == null) return;
@@ -314,7 +317,9 @@ function MyAvailabilityForm() {
   }
 
   const isPending =
-    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -352,7 +357,10 @@ function MyAvailabilityForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const num = desiredHoursValue.trim() === "" ? null : parseFloat(desiredHoursValue);
+              const num =
+                desiredHoursValue.trim() === ""
+                  ? null
+                  : parseFloat(desiredHoursValue);
               if (num !== null && (isNaN(num) || num < 0 || num > 80)) {
                 toast.error("Enter a number between 0 and 80");
                 return;
@@ -418,7 +426,9 @@ function MyAvailabilityForm() {
             return (
               <Card key={locationId}>
                 <CardHeader>
-                  <CardTitle className="text-lg">{loc?.name ?? "Unknown"}</CardTitle>
+                  <CardTitle className="text-lg">
+                    {loc?.name ?? "Unknown"}
+                  </CardTitle>
                   <p className="text-muted-foreground text-sm">
                     {loc?.timezone}
                   </p>
@@ -438,8 +448,8 @@ function MyAvailabilityForm() {
                               {DAY_NAMES[w.dayOfWeek ?? 0]}
                             </Badge>
                             <span className="text-sm">
-                              {formatTimeLocal(w.startsAt, w.location.timezone)} –{" "}
-                              {formatTimeLocal(w.endsAt, w.location.timezone)}
+                              {formatTimeLocal(w.startsAt, w.location.timezone)}{" "}
+                              – {formatTimeLocal(w.endsAt, w.location.timezone)}
                             </span>
                           </div>
                           <div className="flex gap-1">
@@ -545,10 +555,7 @@ function MyAvailabilityForm() {
                     <FormItem>
                       <FormLabel>Start time</FormLabel>
                       <FormControl>
-                        <Input
-                          type="time"
-                          {...field}
-                        />
+                        <Input type="time" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -561,10 +568,7 @@ function MyAvailabilityForm() {
                     <FormItem>
                       <FormLabel>End time</FormLabel>
                       <FormControl>
-                        <Input
-                          type="time"
-                          {...field}
-                        />
+                        <Input type="time" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

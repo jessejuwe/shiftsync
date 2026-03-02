@@ -20,8 +20,18 @@ export type ShiftModel = runtime.Types.Result.DefaultSelection<Prisma.$ShiftPayl
 
 export type AggregateShift = {
   _count: ShiftCountAggregateOutputType | null
+  _avg: ShiftAvgAggregateOutputType | null
+  _sum: ShiftSumAggregateOutputType | null
   _min: ShiftMinAggregateOutputType | null
   _max: ShiftMaxAggregateOutputType | null
+}
+
+export type ShiftAvgAggregateOutputType = {
+  headcount: number | null
+}
+
+export type ShiftSumAggregateOutputType = {
+  headcount: number | null
 }
 
 export type ShiftMinAggregateOutputType = {
@@ -31,6 +41,7 @@ export type ShiftMinAggregateOutputType = {
   endsAt: Date | null
   title: string | null
   notes: string | null
+  headcount: number | null
   isPublished: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -43,6 +54,7 @@ export type ShiftMaxAggregateOutputType = {
   endsAt: Date | null
   title: string | null
   notes: string | null
+  headcount: number | null
   isPublished: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -55,12 +67,21 @@ export type ShiftCountAggregateOutputType = {
   endsAt: number
   title: number
   notes: number
+  headcount: number
   isPublished: number
   createdAt: number
   updatedAt: number
   _all: number
 }
 
+
+export type ShiftAvgAggregateInputType = {
+  headcount?: true
+}
+
+export type ShiftSumAggregateInputType = {
+  headcount?: true
+}
 
 export type ShiftMinAggregateInputType = {
   id?: true
@@ -69,6 +90,7 @@ export type ShiftMinAggregateInputType = {
   endsAt?: true
   title?: true
   notes?: true
+  headcount?: true
   isPublished?: true
   createdAt?: true
   updatedAt?: true
@@ -81,6 +103,7 @@ export type ShiftMaxAggregateInputType = {
   endsAt?: true
   title?: true
   notes?: true
+  headcount?: true
   isPublished?: true
   createdAt?: true
   updatedAt?: true
@@ -93,6 +116,7 @@ export type ShiftCountAggregateInputType = {
   endsAt?: true
   title?: true
   notes?: true
+  headcount?: true
   isPublished?: true
   createdAt?: true
   updatedAt?: true
@@ -137,6 +161,18 @@ export type ShiftAggregateArgs<ExtArgs extends runtime.Types.Extensions.Internal
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: ShiftAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: ShiftSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: ShiftMinAggregateInputType
@@ -167,6 +203,8 @@ export type ShiftGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
   take?: number
   skip?: number
   _count?: ShiftCountAggregateInputType | true
+  _avg?: ShiftAvgAggregateInputType
+  _sum?: ShiftSumAggregateInputType
   _min?: ShiftMinAggregateInputType
   _max?: ShiftMaxAggregateInputType
 }
@@ -178,10 +216,13 @@ export type ShiftGroupByOutputType = {
   endsAt: Date
   title: string | null
   notes: string | null
+  headcount: number
   isPublished: boolean
   createdAt: Date
   updatedAt: Date
   _count: ShiftCountAggregateOutputType | null
+  _avg: ShiftAvgAggregateOutputType | null
+  _sum: ShiftSumAggregateOutputType | null
   _min: ShiftMinAggregateOutputType | null
   _max: ShiftMaxAggregateOutputType | null
 }
@@ -211,6 +252,7 @@ export type ShiftWhereInput = {
   endsAt?: Prisma.DateTimeFilter<"Shift"> | Date | string
   title?: Prisma.StringNullableFilter<"Shift"> | string | null
   notes?: Prisma.StringNullableFilter<"Shift"> | string | null
+  headcount?: Prisma.IntFilter<"Shift"> | number
   isPublished?: Prisma.BoolFilter<"Shift"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Shift"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Shift"> | Date | string
@@ -226,6 +268,7 @@ export type ShiftOrderByWithRelationInput = {
   endsAt?: Prisma.SortOrder
   title?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  headcount?: Prisma.SortOrder
   isPublished?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -244,6 +287,7 @@ export type ShiftWhereUniqueInput = Prisma.AtLeast<{
   endsAt?: Prisma.DateTimeFilter<"Shift"> | Date | string
   title?: Prisma.StringNullableFilter<"Shift"> | string | null
   notes?: Prisma.StringNullableFilter<"Shift"> | string | null
+  headcount?: Prisma.IntFilter<"Shift"> | number
   isPublished?: Prisma.BoolFilter<"Shift"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Shift"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Shift"> | Date | string
@@ -259,12 +303,15 @@ export type ShiftOrderByWithAggregationInput = {
   endsAt?: Prisma.SortOrder
   title?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  headcount?: Prisma.SortOrder
   isPublished?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ShiftCountOrderByAggregateInput
+  _avg?: Prisma.ShiftAvgOrderByAggregateInput
   _max?: Prisma.ShiftMaxOrderByAggregateInput
   _min?: Prisma.ShiftMinOrderByAggregateInput
+  _sum?: Prisma.ShiftSumOrderByAggregateInput
 }
 
 export type ShiftScalarWhereWithAggregatesInput = {
@@ -277,6 +324,7 @@ export type ShiftScalarWhereWithAggregatesInput = {
   endsAt?: Prisma.DateTimeWithAggregatesFilter<"Shift"> | Date | string
   title?: Prisma.StringNullableWithAggregatesFilter<"Shift"> | string | null
   notes?: Prisma.StringNullableWithAggregatesFilter<"Shift"> | string | null
+  headcount?: Prisma.IntWithAggregatesFilter<"Shift"> | number
   isPublished?: Prisma.BoolWithAggregatesFilter<"Shift"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Shift"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Shift"> | Date | string
@@ -288,6 +336,7 @@ export type ShiftCreateInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -303,6 +352,7 @@ export type ShiftUncheckedCreateInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -316,6 +366,7 @@ export type ShiftUpdateInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -331,6 +382,7 @@ export type ShiftUncheckedUpdateInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -345,6 +397,7 @@ export type ShiftCreateManyInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -356,6 +409,7 @@ export type ShiftUpdateManyMutationInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -368,6 +422,7 @@ export type ShiftUncheckedUpdateManyInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -390,9 +445,14 @@ export type ShiftCountOrderByAggregateInput = {
   endsAt?: Prisma.SortOrder
   title?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  headcount?: Prisma.SortOrder
   isPublished?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type ShiftAvgOrderByAggregateInput = {
+  headcount?: Prisma.SortOrder
 }
 
 export type ShiftMaxOrderByAggregateInput = {
@@ -402,6 +462,7 @@ export type ShiftMaxOrderByAggregateInput = {
   endsAt?: Prisma.SortOrder
   title?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  headcount?: Prisma.SortOrder
   isPublished?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -414,9 +475,14 @@ export type ShiftMinOrderByAggregateInput = {
   endsAt?: Prisma.SortOrder
   title?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  headcount?: Prisma.SortOrder
   isPublished?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type ShiftSumOrderByAggregateInput = {
+  headcount?: Prisma.SortOrder
 }
 
 export type ShiftScalarRelationFilter = {
@@ -466,6 +532,14 @@ export type ShiftUncheckedUpdateManyWithoutLocationNestedInput = {
   deleteMany?: Prisma.ShiftScalarWhereInput | Prisma.ShiftScalarWhereInput[]
 }
 
+export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type ShiftCreateNestedOneWithoutRequiredSkillsInput = {
   create?: Prisma.XOR<Prisma.ShiftCreateWithoutRequiredSkillsInput, Prisma.ShiftUncheckedCreateWithoutRequiredSkillsInput>
   connectOrCreate?: Prisma.ShiftCreateOrConnectWithoutRequiredSkillsInput
@@ -500,6 +574,7 @@ export type ShiftCreateWithoutLocationInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -513,6 +588,7 @@ export type ShiftUncheckedCreateWithoutLocationInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -556,6 +632,7 @@ export type ShiftScalarWhereInput = {
   endsAt?: Prisma.DateTimeFilter<"Shift"> | Date | string
   title?: Prisma.StringNullableFilter<"Shift"> | string | null
   notes?: Prisma.StringNullableFilter<"Shift"> | string | null
+  headcount?: Prisma.IntFilter<"Shift"> | number
   isPublished?: Prisma.BoolFilter<"Shift"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Shift"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Shift"> | Date | string
@@ -567,6 +644,7 @@ export type ShiftCreateWithoutRequiredSkillsInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -581,6 +659,7 @@ export type ShiftUncheckedCreateWithoutRequiredSkillsInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -609,6 +688,7 @@ export type ShiftUpdateWithoutRequiredSkillsInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -623,6 +703,7 @@ export type ShiftUncheckedUpdateWithoutRequiredSkillsInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -635,6 +716,7 @@ export type ShiftCreateWithoutAssignmentsInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -649,6 +731,7 @@ export type ShiftUncheckedCreateWithoutAssignmentsInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -677,6 +760,7 @@ export type ShiftUpdateWithoutAssignmentsInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -691,6 +775,7 @@ export type ShiftUncheckedUpdateWithoutAssignmentsInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -703,6 +788,7 @@ export type ShiftCreateManyLocationInput = {
   endsAt: Date | string
   title?: string | null
   notes?: string | null
+  headcount?: number
   isPublished?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -714,6 +800,7 @@ export type ShiftUpdateWithoutLocationInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -727,6 +814,7 @@ export type ShiftUncheckedUpdateWithoutLocationInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -740,6 +828,7 @@ export type ShiftUncheckedUpdateManyWithoutLocationInput = {
   endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headcount?: Prisma.IntFieldUpdateOperationsInput | number
   isPublished?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -792,6 +881,7 @@ export type ShiftSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   endsAt?: boolean
   title?: boolean
   notes?: boolean
+  headcount?: boolean
   isPublished?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -808,6 +898,7 @@ export type ShiftSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   endsAt?: boolean
   title?: boolean
   notes?: boolean
+  headcount?: boolean
   isPublished?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -821,6 +912,7 @@ export type ShiftSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   endsAt?: boolean
   title?: boolean
   notes?: boolean
+  headcount?: boolean
   isPublished?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -834,12 +926,13 @@ export type ShiftSelectScalar = {
   endsAt?: boolean
   title?: boolean
   notes?: boolean
+  headcount?: boolean
   isPublished?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ShiftOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "locationId" | "startsAt" | "endsAt" | "title" | "notes" | "isPublished" | "createdAt" | "updatedAt", ExtArgs["result"]["shift"]>
+export type ShiftOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "locationId" | "startsAt" | "endsAt" | "title" | "notes" | "headcount" | "isPublished" | "createdAt" | "updatedAt", ExtArgs["result"]["shift"]>
 export type ShiftInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   location?: boolean | Prisma.LocationDefaultArgs<ExtArgs>
   requiredSkills?: boolean | Prisma.Shift$requiredSkillsArgs<ExtArgs>
@@ -867,6 +960,7 @@ export type $ShiftPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     endsAt: Date
     title: string | null
     notes: string | null
+    headcount: number
     isPublished: boolean
     createdAt: Date
     updatedAt: Date
@@ -1302,6 +1396,7 @@ export interface ShiftFieldRefs {
   readonly endsAt: Prisma.FieldRef<"Shift", 'DateTime'>
   readonly title: Prisma.FieldRef<"Shift", 'String'>
   readonly notes: Prisma.FieldRef<"Shift", 'String'>
+  readonly headcount: Prisma.FieldRef<"Shift", 'Int'>
   readonly isPublished: Prisma.FieldRef<"Shift", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"Shift", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Shift", 'DateTime'>

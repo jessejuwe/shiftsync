@@ -43,6 +43,7 @@ interface Shift {
   endsAt: string;
   title: string | null;
   notes: string | null;
+  headcount?: number;
   isPublished: boolean;
   requiredSkills: { id: string; name: string }[];
   assignments: {
@@ -88,6 +89,7 @@ export function ShiftsManager() {
     id: string;
     locationId: string;
     requiredSkillIds: string[];
+    requiredSkills: { id: string; name: string }[];
   } | null>(null);
   const [swapModalAssignment, setSwapModalAssignment] = useState<{
     id: string;
@@ -212,6 +214,7 @@ export function ShiftsManager() {
         endsAt: string;
         title?: string;
         notes?: string;
+        headcount?: number;
         requiredSkillIds?: string[];
       };
     }) => {
@@ -273,6 +276,7 @@ export function ShiftsManager() {
       endsAt: string;
       title?: string;
       notes?: string;
+      headcount?: number;
       requiredSkillIds?: string[];
     }) => {
       const res = await fetch("/api/shifts", {
@@ -297,6 +301,7 @@ export function ShiftsManager() {
         locationId: data.shift.locationId,
         requiredSkillIds:
           data.shift.requiredSkills?.map((s: { id: string }) => s.id) ?? [],
+        requiredSkills: data.shift.requiredSkills ?? [],
       });
     },
     onError: (err) => {
@@ -594,10 +599,18 @@ export function ShiftsManager() {
         <p className="text-muted-foreground">Loading shifts...</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {shifts.map((shift) => (
+          {shifts.map((shift) => {
+            const now = new Date();
+            const endsAt = new Date(shift.endsAt);
+            const isPast = endsAt < now;
+            const headcount = shift.headcount ?? 1;
+            const isFull = shift.assignments.length >= headcount;
+            return (
             <Card
               key={shift.id}
-              className="flex flex-col overflow-hidden transition-shadow hover:shadow-md"
+              className={`flex flex-col overflow-hidden transition-shadow hover:shadow-md ${
+                isPast ? "opacity-75 bg-muted/30" : ""
+              }`}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
@@ -610,6 +623,12 @@ export function ShiftsManager() {
                       {shift.location.name}
                     </p>
                   </div>
+                  <div className="flex flex-wrap items-center gap-1.5 justify-end">
+                    {isPast && (
+                      <Badge variant="outline" className="shrink-0 text-muted-foreground">
+                        Past
+                      </Badge>
+                    )}
                   {shift.isPublished ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -629,6 +648,7 @@ export function ShiftsManager() {
                       <TooltipContent>Not yet visible to staff</TooltipContent>
                     </Tooltip>
                   )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-3">
@@ -642,10 +662,10 @@ export function ShiftsManager() {
                       ))}
                     </div>
                   )}
-                  {shift.assignments.length > 0 && (
+                  {(headcount > 1 || shift.assignments.length > 0) && (
                     <div className="flex flex-wrap items-center gap-1.5 text-sm">
                       <span className="text-muted-foreground shrink-0">
-                        Assigned:
+                        Assigned: {shift.assignments.length}/{headcount}
                       </span>
                       {shift.assignments.map((a) => (
                         <span
@@ -699,21 +719,27 @@ export function ShiftsManager() {
                       </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setStaffModalShift({
-                                id: shift.id,
-                                locationId: shift.locationId,
-                                requiredSkillIds: shift.requiredSkills.map((s) => s.id),
-                              })
-                            }
-                          >
-                            Assign staff
-                          </Button>
+                          <span className="inline-block">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setStaffModalShift({
+                                  id: shift.id,
+                                  locationId: shift.locationId,
+                                  requiredSkillIds: shift.requiredSkills.map((s) => s.id),
+                                  requiredSkills: shift.requiredSkills,
+                                })
+                              }
+                              disabled={isFull}
+                            >
+                              Assign staff
+                            </Button>
+                          </span>
                         </TooltipTrigger>
-                        <TooltipContent>Assign staff to this shift</TooltipContent>
+                        <TooltipContent>
+                          {isFull ? "Shift is full" : "Assign staff to this shift"}
+                        </TooltipContent>
                       </Tooltip>
                     </>
                   )}
@@ -729,13 +755,16 @@ export function ShiftsManager() {
                             const windowStart = new Date(startsAt);
                             windowStart.setMinutes(windowStart.getMinutes() - 15);
                             const canClockIn =
+                              !isPast &&
                               shift.isPublished &&
                               !myAssignment.clockedInAt &&
                               !myAssignment.clockedOutAt &&
                               now >= windowStart &&
                               now <= endsAt;
                             const canClockOut =
-                              !!myAssignment.clockedInAt && !myAssignment.clockedOutAt;
+                              !isPast &&
+                              !!myAssignment.clockedInAt &&
+                              !myAssignment.clockedOutAt;
                             return (
                               <>
                                 {canClockIn && (
@@ -773,51 +802,64 @@ export function ShiftsManager() {
                               </>
                             );
                           })()}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  const a = shift.assignments.find((x) => x.userId === currentUserId)!;
-                                  setSwapModalAssignment({ ...a, shiftId: shift.id });
-                                }}
-                              >
-                                <ArrowLeftRight className="size-3.5" />
-                                Request swap
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Request swap with another staff member</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => unassignMutation.mutate(shift.assignments.find((a) => a.userId === currentUserId)!.id)}
-                                disabled={unassignMutation.isPending}
-                              >
-                                <Gift className="size-3.5" />
-                                Offer up
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Offer this shift to another staff member</TooltipContent>
-                          </Tooltip>
+                          {!isPast && (
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const a = shift.assignments.find((x) => x.userId === currentUserId)!;
+                                      setSwapModalAssignment({ ...a, shiftId: shift.id });
+                                    }}
+                                  >
+                                    <ArrowLeftRight className="size-3.5" />
+                                    Request swap
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Request swap with another staff member</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => unassignMutation.mutate(shift.assignments.find((a) => a.userId === currentUserId)!.id)}
+                                    disabled={unassignMutation.isPending}
+                                  >
+                                    <Gift className="size-3.5" />
+                                    Offer up
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Offer this shift to another staff member</TooltipContent>
+                              </Tooltip>
+                            </>
+                          )}
                         </>
                       )}
                       {!shift.assignments.some((a) => a.userId === currentUserId) && (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setPickupModalShift(shift)}
-                            >
-                              <UserPlus className="size-3.5" />
-                              Pick up
-                            </Button>
+                            <span className="inline-block">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setPickupModalShift(shift)}
+                                disabled={isPast || isFull}
+                              >
+                                <UserPlus className="size-3.5" />
+                                Pick up
+                              </Button>
+                            </span>
                           </TooltipTrigger>
-                          <TooltipContent>Pick up this available shift</TooltipContent>
+                          <TooltipContent>
+                            {isPast
+                              ? "This shift has ended"
+                              : isFull
+                                ? "This shift is full"
+                                : "Pick up this available shift"}
+                          </TooltipContent>
                         </Tooltip>
                       )}
                     </>
@@ -825,7 +867,8 @@ export function ShiftsManager() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          );
+          })}
           {shifts.length === 0 && (
             <p className="text-muted-foreground col-span-full py-8 text-center">
               {canManage
@@ -851,6 +894,7 @@ export function ShiftsManager() {
                 endsAt: values.endsAt,
                 title: values.title || undefined,
                 notes: values.notes || undefined,
+                headcount: values.headcount ?? 1,
                 requiredSkillIds: values.requiredSkillIds?.length
                   ? values.requiredSkillIds
                   : undefined,
@@ -890,7 +934,8 @@ export function ShiftsManager() {
                       endsAt: values.endsAt,
                       title: values.title || undefined,
                       notes: values.notes || undefined,
-                    requiredSkillIds: values.requiredSkillIds,
+                      headcount: values.headcount ?? 1,
+                      requiredSkillIds: values.requiredSkillIds,
                     },
                   });
                 } catch (err) {
@@ -914,6 +959,7 @@ export function ShiftsManager() {
         shiftId={staffModalShift?.id ?? null}
         shiftLocationId={staffModalShift?.locationId ?? null}
         requiredSkillIds={staffModalShift?.requiredSkillIds ?? []}
+        requiredSkills={staffModalShift?.requiredSkills ?? []}
         onAssignSuccess={() => setStaffModalShift(null)}
       />
 

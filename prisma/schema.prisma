@@ -219,6 +219,7 @@ model Shift {
   endsAt      DateTime @map("ends_at")
   title       String?
   notes       String?
+  headcount   Int      @default(1) @map("headcount") // Max staff that can be assigned
   isPublished Boolean  @default(false) @map("is_published")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")

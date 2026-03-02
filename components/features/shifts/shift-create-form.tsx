@@ -29,6 +29,7 @@ const shiftCreateSchema = z.object({
   endsAt: z.string().min(1, "End time is required"),
   title: z.string().optional(),
   notes: z.string().optional(),
+  headcount: z.coerce.number().int().min(1, "At least 1").default(1),
   requiredSkillIds: z.array(z.string()).optional(),
 });
 
@@ -70,6 +71,7 @@ export function ShiftCreateForm({
       endsAt: "",
       title: "",
       notes: "",
+      headcount: 1,
       requiredSkillIds: [],
     },
   });
@@ -142,6 +144,27 @@ export function ShiftCreateForm({
                 <Input
                   type="datetime-local"
                   {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="headcount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Headcount</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  value={field.value}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    field.onChange(v ? Math.max(1, parseInt(v, 10) || 1) : 1);
+                  }}
                 />
               </FormControl>
               <FormMessage />

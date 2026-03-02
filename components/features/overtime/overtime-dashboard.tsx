@@ -160,8 +160,7 @@ export function OvertimeDashboard() {
         <div>
           <h1 className="text-2xl font-semibold">Overtime</h1>
           <p className="text-muted-foreground text-sm">
-            Staff hours this week • Highlight 35+ (approaching), 40+ (overtime),
-            6th and 7+ consecutive days
+            35+ approaching, 40+ overtime, 6th/7th consecutive days
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

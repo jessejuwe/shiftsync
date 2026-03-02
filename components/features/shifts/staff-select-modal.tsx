@@ -44,6 +44,7 @@ interface StaffMember {
     locationName: string;
     expiresAt: string;
   }[];
+  hasRequiredSkills?: boolean;
 }
 
 interface StaffSelectModalProps {
@@ -52,6 +53,7 @@ interface StaffSelectModalProps {
   shiftId: string | null;
   shiftLocationId: string | null;
   requiredSkillIds: string[];
+  requiredSkills: { id: string; name: string }[];
   onAssignSuccess: () => void;
   onAssignError?: (error: unknown) => void;
 }
@@ -62,6 +64,7 @@ export function StaffSelectModal({
   shiftId,
   shiftLocationId,
   requiredSkillIds,
+  requiredSkills,
   onAssignSuccess,
   onAssignError,
 }: StaffSelectModalProps) {
@@ -78,15 +81,20 @@ export function StaffSelectModal({
   >(null);
 
   const { data: staffData, isLoading } = useQuery({
-    queryKey: ["staff", shiftLocationId],
+    queryKey: ["staff", shiftId, shiftLocationId],
     queryFn: async () => {
+      if (shiftId) {
+        const res = await fetch(`/api/shifts/${shiftId}/qualified-staff`);
+        if (!res.ok) throw new Error("Failed to fetch qualified staff");
+        return res.json();
+      }
       const params = new URLSearchParams();
       if (shiftLocationId) params.set("locationId", shiftLocationId);
       const res = await fetch("/api/staff?" + params);
       if (!res.ok) throw new Error("Failed to fetch staff");
       return res.json();
     },
-    enabled: open && !!shiftLocationId,
+    enabled: open && (!!shiftId || !!shiftLocationId),
   });
 
   const assignMutation = useMutation({
@@ -146,7 +154,7 @@ export function StaffSelectModal({
       const needsOverride =
         e.status === 422 &&
         block?.code === "CONSECUTIVE_DAYS_EXCEEDED" &&
-        block.metadata?.requiresOverride === true &&
+        block?.metadata?.requiresOverride === true &&
         e.userId;
       if (needsOverride) {
         setPendingOverrideUserId(e.userId!);
@@ -233,6 +241,9 @@ export function StaffSelectModal({
       <DialogContent className="flex max-h-[85vh] max-w-xl flex-col overflow-hidden ">
         <DialogHeader className="shrink-0">
           <DialogTitle>Assign staff</DialogTitle>
+          <p className="text-muted-foreground text-sm">
+            Staff certified at this location.
+          </p>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto max-h-[calc(85vh-7rem)]">
           <div className="min-w-0 space-y-4">
@@ -251,17 +262,18 @@ export function StaffSelectModal({
               <div className="space-y-2">
                 {staff.map((s) => {
                   const hasAllSkills =
-                    requiredSkillIds.length === 0 ||
-                    requiredSkillIds.every((rid) =>
-                      s.skills.some((sk) => sk.id === rid),
-                    );
+                    s.hasRequiredSkills ??
+                    (requiredSkillIds.length === 0 ||
+                      requiredSkillIds.every((rid) =>
+                        s.skills.some((sk) => sk.id === rid),
+                      ));
                   return (
                     <div
                       key={s.id}
                       className={`flex items-center justify-between rounded-xl border p-4 transition-colors hover:bg-muted/50 ${
-                        !hasAllSkills
-                          ? "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20"
-                          : ""
+                        hasAllSkills
+                          ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20"
+                          : "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20"
                       }`}
                     >
                       <div className="min-w-0 flex-1">
@@ -269,20 +281,42 @@ export function StaffSelectModal({
                         <p className="text-muted-foreground truncate text-sm">
                           {s.email}
                         </p>
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {s.skills.map((sk) => (
-                            <Badge
-                              key={sk.id}
-                              variant={
-                                requiredSkillIds.includes(sk.id)
-                                  ? "default"
-                                  : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {sk.name}
-                            </Badge>
-                          ))}
+                        <div className="mt-2 flex flex-wrap items-center gap-1">
+                          {!hasAllSkills && requiredSkills.length > 0 ? (
+                            <>
+                              <Badge
+                                variant="outline"
+                                className="border-amber-500/50 text-amber-700 dark:text-amber-400"
+                              >
+                                Missing required skill
+                              </Badge>
+                              {requiredSkills
+                                .filter(
+                                  (rs) =>
+                                    !s.skills.some((sk) => sk.id === rs.id),
+                                )
+                                .map((rs) => (
+                                  <span
+                                    key={rs.id}
+                                    className="text-muted-foreground rounded-md bg-muted px-2 py-0.5 text-xs font-medium"
+                                  >
+                                    {rs.name}
+                                  </span>
+                                ))}
+                            </>
+                          ) : (
+                            s.skills
+                              .filter((sk) => requiredSkillIds.includes(sk.id))
+                              .map((sk) => (
+                                <Badge
+                                  key={sk.id}
+                                  variant="secondary"
+                                  className="text-xs"
+                                >
+                                  {sk.name}
+                                </Badge>
+                              ))
+                          )}
                         </div>
                       </div>
                       <Button

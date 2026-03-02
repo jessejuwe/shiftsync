@@ -30,6 +30,7 @@ const shiftEditSchema = z.object({
   endsAt: z.string().min(1, "End time is required"),
   title: z.string().optional(),
   notes: z.string().optional(),
+  headcount: z.coerce.number().int().min(1, "At least 1").default(1),
   requiredSkillIds: z.array(z.string()).optional(),
 });
 
@@ -61,6 +62,7 @@ interface ShiftForEdit {
   endsAt: string;
   title: string | null;
   notes: string | null;
+  headcount?: number;
   requiredSkills: { id: string; name: string }[];
 }
 
@@ -91,6 +93,7 @@ export function ShiftEditForm({
       endsAt: toDatetimeLocal(shift.endsAt),
       title: shift.title ?? "",
       notes: shift.notes ?? "",
+      headcount: shift.headcount ?? 1,
       requiredSkillIds: shift.requiredSkills.map((s) => s.id),
     },
   });
@@ -102,6 +105,7 @@ export function ShiftEditForm({
       endsAt: toDatetimeLocal(shift.endsAt),
       title: shift.title ?? "",
       notes: shift.notes ?? "",
+      headcount: shift.headcount ?? 1,
       requiredSkillIds: shift.requiredSkills.map((s) => s.id),
     });
   }, [shift, form]);
@@ -180,6 +184,27 @@ export function ShiftEditForm({
               <FormLabel>End time</FormLabel>
               <FormControl>
                 <Input type="datetime-local" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="headcount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Headcount</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  value={field.value}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    field.onChange(v ? Math.max(1, parseInt(v, 10) || 1) : 1);
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

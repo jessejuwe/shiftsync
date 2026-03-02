@@ -200,6 +200,7 @@ export const ShiftScalarFieldEnum = {
   endsAt: 'endsAt',
   title: 'title',
   notes: 'notes',
+  headcount: 'headcount',
   isPublished: 'isPublished',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

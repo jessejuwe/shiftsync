@@ -13,6 +13,7 @@ import {
   type PolicyAvailabilityWindow,
 } from "@/lib/domain/shift-policy";
 import { STAFF_PICKUP_MESSAGES } from "@/lib/validation-messages";
+import { maybeSimulateNotificationEmail } from "@/lib/email-simulator";
 
 const ASSIGNMENT_CONFLICT = "ASSIGNMENT_CONFLICT";
 const VALIDATION_FAILED = "VALIDATION_FAILED";
@@ -181,7 +182,22 @@ export async function POST(request: NextRequest) {
         }),
       ]);
 
-      // 4. Check for existing assignment (unique constraint)
+      // 4. Check headcount - shift must have capacity
+      const assignmentCount = await tx.shiftAssignment.count({
+        where: { shiftId },
+      });
+      if (assignmentCount >= shift.headcount) {
+        return {
+          success: false as const,
+          error: {
+            code: "HEADCOUNT_EXCEEDED",
+            message: `This shift is full (${assignmentCount}/${shift.headcount} assigned).`,
+            details: { shiftId, headcount: shift.headcount, assigned: assignmentCount },
+          },
+        };
+      }
+
+      // 5. Check for existing assignment (unique constraint)
       const existingAssignment = await tx.shiftAssignment.findUnique({
         where: { shiftId_userId: { shiftId, userId } },
       });
@@ -197,7 +213,7 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      // 5. Build policy inputs and re-check constraints
+      // 6. Build policy inputs and re-check constraints
       const policyShift: PolicyShift = {
         id: shift.id,
         locationId: shift.locationId,
@@ -270,6 +286,105 @@ export async function POST(request: NextRequest) {
         new Map(usersWithCerts.map((u) => [u.id, u])).values()
       );
 
+      // Compute fully qualified alternatives (cert + skills + availability + no conflicts)
+      const certIds = new Set(uniqueCertUsers.map((u) => u.id));
+      const candidates = usersWithAllSkills.filter((u) => certIds.has(u.id));
+      const candidateIds = candidates.map((c) => c.id);
+
+      let qualifiedAlternatives: { id: string; name: string; email: string }[] =
+        [];
+      if (candidateIds.length > 0) {
+        const [candidateAvailability, candidateAssignments] = await Promise.all([
+          tx.availabilityWindow.findMany({
+            where: {
+              userId: { in: candidateIds },
+              locationId: shift.locationId,
+            },
+            select: {
+              userId: true,
+              startsAt: true,
+              endsAt: true,
+              locationId: true,
+              dayOfWeek: true,
+              isRecurring: true,
+            },
+          }),
+          tx.shiftAssignment.findMany({
+            where: { userId: { in: candidateIds } },
+            include: { shift: { select: { startsAt: true, endsAt: true } } },
+          }),
+        ]);
+
+        const availByUser = new Map<string, typeof candidateAvailability>();
+        for (const w of candidateAvailability) {
+          const list = availByUser.get(w.userId) ?? [];
+          list.push(w);
+          availByUser.set(w.userId, list);
+        }
+        const assignmentsByUser = new Map<
+          string,
+          { id: string; shiftId: string; userId: string; shift: { startsAt: Date; endsAt: Date } }[]
+        >();
+        for (const a of candidateAssignments) {
+          const list = assignmentsByUser.get(a.userId) ?? [];
+          list.push(a);
+          assignmentsByUser.set(a.userId, list);
+        }
+
+        const weekStartAlt = getWeekStart(shift.startsAt);
+        const weekEndAlt = new Date(weekStartAlt);
+        weekEndAlt.setUTCDate(weekEndAlt.getUTCDate() + 6);
+        weekEndAlt.setUTCHours(23, 59, 59, 999);
+
+        for (const cand of candidates) {
+          const candAssignments = assignmentsByUser.get(cand.id) ?? [];
+          const candAssignmentsInWeek = candAssignments.filter((a) => {
+            const s = a.shift.startsAt;
+            return s >= weekStartAlt && s <= weekEndAlt;
+          });
+          const candWindows = (availByUser.get(cand.id) ?? []).map((w) => ({
+            userId: cand.id,
+            locationId: w.locationId,
+            startsAt: w.startsAt,
+            endsAt: w.endsAt,
+            dayOfWeek: w.dayOfWeek,
+            isRecurring: w.isRecurring,
+          }));
+          const candCerts = allCertsForLocation
+            .filter((c) => c.userId === cand.id)
+            .map((c) => ({
+              userId: c.userId,
+              locationId: c.locationId,
+              expiresAt: c.expiresAt,
+            }));
+
+          const candValidation = validateShiftAssignment({
+            shift: policyShift,
+            userId: cand.id,
+            userSkillIds: cand.skillIds,
+            userCertifications: candCerts,
+            userAvailabilityWindows: candWindows,
+            userAssignments: candAssignments.map(toPolicyAssignment),
+            userAssignmentsInWeek: candAssignmentsInWeek.map(toPolicyAssignment),
+            allUsersWithSkills: usersWithAllSkills,
+            allUsersWithLocationCerts: uniqueCertUsers,
+            allUsersWithAvailability: uniqueCertUsers.map((u) => ({
+              ...u,
+              hasAvailability: true,
+            })),
+            now: new Date(),
+          });
+
+          if (candValidation.valid) {
+            qualifiedAlternatives.push({
+              id: cand.id,
+              name: cand.name,
+              email: cand.email,
+            });
+          }
+        }
+      }
+
       const validation = validateShiftAssignment({
         shift: policyShift,
         userId,
@@ -284,18 +399,22 @@ export async function POST(request: NextRequest) {
           ...u,
           hasAvailability: true,
         })),
+        qualifiedAlternatives:
+          qualifiedAlternatives.length > 0 ? qualifiedAlternatives : undefined,
         now: new Date(),
       });
 
-      const canOverride7thDay =
+      const canOverride =
         !validation.valid &&
         validation.blocks.length === 1 &&
-        validation.blocks[0].code === "CONSECUTIVE_DAYS_EXCEEDED" &&
         validation.blocks[0].metadata?.requiresOverride === true &&
         typeof overrideReason === "string" &&
         overrideReason.trim().length > 0 &&
         (session?.user as { role?: string } | undefined)?.role &&
         ["MANAGER", "ADMIN"].includes((session!.user as { role?: string }).role!);
+
+      const canOverride7thDay =
+        canOverride && validation.blocks[0].code === "CONSECUTIVE_DAYS_EXCEEDED";
 
       if (!validation.valid && !canOverride7thDay) {
         const conflictBlock = validation.blocks[0];
@@ -318,14 +437,22 @@ export async function POST(request: NextRequest) {
             : null;
         const userMessage =
           staffMessage ?? conflictBlock?.message ?? "Shift assignment validation failed";
+        const qualifiedIds = new Set(qualifiedAlternatives.map((q) => q.id));
+        const filterSuggestions = <T extends { suggestions?: { id: string }[] }>(
+          items: T[]
+        ) =>
+          items.map((item) => ({
+            ...item,
+            suggestions: item.suggestions?.filter((s) => qualifiedIds.has(s.id)),
+          }));
         return {
           success: false as const,
           error: {
             code: VALIDATION_FAILED,
             message: userMessage,
             details: {
-              blocks: validation.blocks,
-              warnings: validation.warnings,
+              blocks: filterSuggestions(validation.blocks),
+              warnings: filterSuggestions(validation.warnings),
             },
             conflictPayload: {
               userId,
@@ -337,7 +464,7 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      // 6. Create assignment
+      // 7. Create assignment
       const assignment = await tx.shiftAssignment.create({
         data: {
           shiftId,
@@ -346,7 +473,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 7. Create notification
+      // 8. Create notification
       await tx.notification.create({
         data: {
           userId,
@@ -357,7 +484,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 8. Audit log for 7th-day override
+      // 9. Audit log for 7th-day override
       if (canOverride7thDay && session?.user?.id) {
         await tx.auditLog.create({
           data: {
@@ -400,7 +527,7 @@ export async function POST(request: NextRequest) {
           ? 404
           : code === ASSIGNMENT_CONFLICT
             ? 409
-            : code === NOT_PUBLISHED
+            : code === NOT_PUBLISHED || code === "HEADCOUNT_EXCEEDED"
               ? 400
               : 422;
       if (conflictPayload) {
@@ -424,6 +551,13 @@ export async function POST(request: NextRequest) {
     void broadcastShiftAssigned(userId, result.data.locationId, {
       assignmentId: result.data.assignment.id,
       shiftId: result.data.assignment.shiftId,
+    });
+
+    void maybeSimulateNotificationEmail({
+      userId,
+      type: "SHIFT_ASSIGNED",
+      title: "New shift assigned",
+      body: "You have been assigned to a shift.",
     });
 
     return NextResponse.json(

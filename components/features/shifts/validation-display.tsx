@@ -29,7 +29,8 @@ function ValidationItem({
 }) {
   const Icon = item.type === "block" ? AlertCircle : AlertTriangle;
   const label = VALIDATION_LABELS[item.code] ?? item.code;
-  const hasSuggestions = item.suggestions && item.suggestions.length > 0;
+  const suggestions = item.suggestions?.filter((s) => s.id && s.name) ?? [];
+  const hasSuggestions = suggestions.length > 0;
 
   return (
     <Alert variant={item.type === "block" ? "destructive" : "default"}>
@@ -47,15 +48,19 @@ function ValidationItem({
               Suggested alternatives
             </p>
             <div className="flex flex-wrap gap-2">
-              {item.suggestions!.map((s) => (
+              {suggestions.map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 shadow-sm"
+                  className="flex items-center gap-2 rounded-lg border border-green-500/50 bg-green-50/50 px-3 py-2 shadow-sm w-full justify-between dark:bg-green-950/20"
                 >
-                  <span className="text-sm font-medium">{s.name}</span>
-                  {s.email && (
-                    <span className="text-muted-foreground text-xs">({s.email})</span>
-                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{s.name}</p>
+                    {s.email && (
+                      <p className="text-muted-foreground truncate text-xs">
+                        {s.email}
+                      </p>
+                    )}
+                  </div>
                   {onAssignSuggestion && (
                     <Button
                       size="sm"
@@ -90,7 +95,9 @@ export function ValidationDisplay({
     <div className="space-y-3">
       {hasBlocks && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-destructive">Blocking issues</h4>
+          <h4 className="text-sm font-medium text-destructive">
+            Blocking issues
+          </h4>
           {blocks.map((item, i) => (
             <ValidationItem
               key={`${item.code}-${i}`}
@@ -102,7 +109,9 @@ export function ValidationDisplay({
       )}
       {hasWarnings && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground">Warnings</h4>
+          <h4 className="text-sm font-medium text-muted-foreground">
+            Warnings
+          </h4>
           {warnings.map((item, i) => (
             <ValidationItem
               key={`${item.code}-${i}`}

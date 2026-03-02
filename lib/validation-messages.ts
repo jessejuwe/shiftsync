@@ -33,3 +33,7 @@ export const STAFF_PICKUP_MESSAGES: Record<ValidationCode, string> = {
   CONSECUTIVE_DAYS_EXCEEDED:
     "This would be too many days in a row. You need a day off between shifts.",
 };
+
+/** Message when shift is full (headcount exceeded) */
+export const HEADCOUNT_EXCEEDED_MESSAGE =
+  "This shift is full. No more staff can be assigned.";

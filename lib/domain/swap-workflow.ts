@@ -36,8 +36,11 @@ export function isTerminalState(state: SwapStateType): boolean {
 /** Max number of non-terminal swap requests per staff (initiator or receiver). */
 export const MAX_PENDING_SWAPS_PER_STAFF = 3;
 
-/** Expiration window in hours from creation. */
+/** Expiration window in hours from creation (for swaps). */
 export const SWAP_EXPIRATION_HOURS = 24;
+
+/** Hours before shift start when drop requests expire. */
+export const DROP_EXPIRATION_HOURS_BEFORE_START = 24;
 
 /** Non-terminal states that count toward the pending limit. */
 export const PENDING_STATES: SwapStateType[] = [
@@ -66,13 +69,38 @@ export function canCreateSwap(pendingCount: number): { valid: boolean; error?: s
 }
 
 /**
- * Compute expiration timestamp from creation time.
+ * Compute expiration timestamp from creation time (for swaps).
  * Use this when creating a swap; pass the result in context.expiresAt.
  */
 export function getDefaultExpiration(createdAt: Date = new Date()): Date {
   const expiresAt = new Date(createdAt);
   expiresAt.setHours(expiresAt.getHours() + SWAP_EXPIRATION_HOURS);
   return expiresAt;
+}
+
+/**
+ * Compute expiration for drop requests: 24 hours before the shift starts.
+ * Spec: "Drop requests expire 24 hours before the shift starts if unclaimed."
+ */
+export function getDropExpiration(shiftStartsAt: Date): Date {
+  const expiresAt = new Date(shiftStartsAt);
+  expiresAt.setHours(expiresAt.getHours() - DROP_EXPIRATION_HOURS_BEFORE_START);
+  return expiresAt;
+}
+
+/**
+ * Get the effective expiration for a swap request.
+ * Drops: 24h before shift start. Swaps: 24h from creation.
+ */
+export function getSwapRequestExpiration(options: {
+  initiatorShiftStartsAt: Date;
+  receiverShiftId: string | null;
+  createdAt: Date;
+}): Date {
+  if (!options.receiverShiftId) {
+    return getDropExpiration(options.initiatorShiftStartsAt);
+  }
+  return getDefaultExpiration(options.createdAt);
 }
 
 /**

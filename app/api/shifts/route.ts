@@ -3,12 +3,28 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Sign in required" },
+      { status: 401 }
+    );
+  }
+  const role = (session.user as { role?: string })?.role;
+  if (role !== "ADMIN" && role !== "MANAGER") {
+    return NextResponse.json(
+      { code: "FORBIDDEN", message: "Admin or Manager access required" },
+      { status: 403 }
+    );
+  }
+
   let body: {
     locationId: string;
     startsAt: string;
     endsAt: string;
     title?: string;
     notes?: string;
+    headcount?: number;
     requiredSkillIds?: string[];
   };
   try {
@@ -20,7 +36,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { locationId, startsAt, endsAt, title, notes, requiredSkillIds } = body;
+  const { locationId, startsAt, endsAt, title, notes, headcount, requiredSkillIds } = body;
 
   if (!locationId || !startsAt || !endsAt) {
     return NextResponse.json(
@@ -53,23 +69,36 @@ export async function POST(request: NextRequest) {
         throw new Error("LOCATION_NOT_FOUND");
       }
 
+      if (requiredSkillIds?.length) {
+        const existingSkills = await tx.skill.findMany({
+          where: { id: { in: requiredSkillIds } },
+          select: { id: true },
+        });
+        const existingIds = new Set(existingSkills.map((s) => s.id));
+        const missing = requiredSkillIds.filter((id) => !existingIds.has(id));
+        if (missing.length > 0) {
+          throw new Error(`SKILLS_NOT_FOUND:${missing.join(",")}`);
+        }
+      }
+
       return tx.shift.create({
-      data: {
-        locationId,
-        startsAt: startsAtDate,
-        endsAt: endsAtDate,
-        title: title ?? null,
-        notes: notes ?? null,
-        requiredSkills:
-          requiredSkillIds?.length
-            ? { create: requiredSkillIds.map((skillId) => ({ skillId })) }
-            : undefined,
-      },
-      include: {
-        location: { select: { id: true, name: true, timezone: true } },
-        requiredSkills: { include: { skill: { select: { id: true, name: true } } } },
-      },
-    });
+        data: {
+          locationId,
+          startsAt: startsAtDate,
+          endsAt: endsAtDate,
+          title: title ?? null,
+          notes: notes ?? null,
+          headcount: headcount != null && headcount >= 1 ? headcount : 1,
+          requiredSkills:
+            requiredSkillIds?.length
+              ? { create: requiredSkillIds.map((skillId) => ({ skillId })) }
+              : undefined,
+        },
+        include: {
+          location: { select: { id: true, name: true, timezone: true } },
+          requiredSkills: { include: { skill: { select: { id: true, name: true } } } },
+        },
+      });
     });
 
     return NextResponse.json(
@@ -82,6 +111,7 @@ export async function POST(request: NextRequest) {
           endsAt: shift.endsAt.toISOString(),
           title: shift.title,
           notes: shift.notes,
+          headcount: shift.headcount,
           isPublished: shift.isPublished,
           requiredSkills: shift.requiredSkills.map((ss) => ({
             id: ss.skill.id,
@@ -99,9 +129,28 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+    if (msg.startsWith("SKILLS_NOT_FOUND:")) {
+      const ids = msg.replace("SKILLS_NOT_FOUND:", "");
+      return NextResponse.json(
+        { code: "NOT_FOUND", message: `Skill(s) not found: ${ids}` },
+        { status: 404 }
+      );
+    }
+    const prismaErr = err as { code?: string; meta?: { target?: string[] } };
+    if (prismaErr.code === "P2003") {
+      return NextResponse.json(
+        { code: "NOT_FOUND", message: "Referenced location or skill not found" },
+        { status: 404 }
+      );
+    }
     console.error("Shift create error:", err);
     return NextResponse.json(
-      { code: "INTERNAL_ERROR", message: "Failed to create shift" },
+      {
+        code: "INTERNAL_ERROR",
+        message: "Failed to create shift",
+        ...(process.env.NODE_ENV === "development" &&
+          err instanceof Error && { details: err.message }),
+      },
       { status: 500 }
     );
   }
@@ -154,6 +203,7 @@ export async function GET(request: NextRequest) {
       endsAt: s.endsAt.toISOString(),
       title: s.title,
       notes: s.notes,
+      headcount: s.headcount,
       isPublished: s.isPublished,
       requiredSkills: s.requiredSkills.map((ss) => ({ id: ss.skill.id, name: ss.skill.name })),
       assignments: s.assignments.map((a) => ({

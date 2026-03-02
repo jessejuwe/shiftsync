@@ -68,6 +68,7 @@ export async function PATCH(
     endsAt?: string;
     title?: string;
     notes?: string;
+    headcount?: number;
     isPublished?: boolean;
     requiredSkillIds?: string[];
   };
@@ -85,6 +86,7 @@ export async function PATCH(
     endsAt?: Date;
     title?: string;
     notes?: string;
+    headcount?: number;
     isPublished?: boolean;
   } = {};
 
@@ -92,6 +94,7 @@ export async function PATCH(
   if (body.endsAt != null) updateData.endsAt = new Date(body.endsAt);
   if (body.title !== undefined) updateData.title = body.title;
   if (body.notes !== undefined) updateData.notes = body.notes;
+  if (body.headcount !== undefined) updateData.headcount = Math.max(1, body.headcount);
   if (body.isPublished !== undefined) updateData.isPublished = body.isPublished;
 
   const newStartsAt = updateData.startsAt;
@@ -123,6 +126,16 @@ export async function PATCH(
 
       if (!shift) {
         return { success: false as const, error: "NOT_FOUND" };
+      }
+
+      if (updateData.headcount != null && updateData.headcount < shift.assignments.length) {
+        return {
+          success: false as const,
+          error: "INVALID_HEADCOUNT" as const,
+          details: {
+            message: `Cannot set headcount to ${updateData.headcount}: ${shift.assignments.length} staff are already assigned.`,
+          },
+        };
       }
 
       const timesOrSkillsChanged =
@@ -402,6 +415,12 @@ export async function PATCH(
           { status: 404 }
         );
       }
+      if (result.error === "INVALID_HEADCOUNT") {
+        return NextResponse.json(
+          { code: "INVALID_HEADCOUNT", message: result.details?.message ?? "Invalid headcount" },
+          { status: 400 }
+        );
+      }
       if (result.error === "CUTOFF_PASSED") {
         return NextResponse.json(
           {
@@ -441,6 +460,7 @@ export async function PATCH(
         endsAt: updated.endsAt.toISOString(),
         title: updated.title,
         notes: updated.notes,
+        headcount: updated.headcount,
         isPublished: updated.isPublished,
         requiredSkills: updated.requiredSkills.map((ss) => ({
           id: ss.skill.id,

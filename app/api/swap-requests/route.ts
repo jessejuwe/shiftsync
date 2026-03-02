@@ -12,6 +12,8 @@ import {
   toPrismaStatus,
   canCreateSwap,
   getDefaultExpiration,
+  getDropExpiration,
+  getSwapRequestExpiration,
 } from "@/lib/domain/swap-workflow";
 
 /**
@@ -212,7 +214,11 @@ export async function POST(request: NextRequest) {
       }
 
       const createdAt = new Date();
-      const expiresAt = getDefaultExpiration(createdAt);
+      const expiresAt = getSwapRequestExpiration({
+        initiatorShiftStartsAt: initiatorShift.shift.startsAt,
+        receiverShiftId: receiverShiftId ?? null,
+        createdAt,
+      });
 
       const transitionResult = transition(SwapState.ACTIVE, SwapEvent.SEND, {
         initiatorId,

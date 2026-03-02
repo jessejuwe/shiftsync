@@ -511,6 +511,8 @@ export interface ValidateShiftAssignmentInput {
   allUsersWithSkills: Array<PolicyUser & { skillIds: string[] }>;
   allUsersWithLocationCerts: Array<PolicyUser & { hasValidCert: boolean }>;
   allUsersWithAvailability: Array<PolicyUser & { hasAvailability: boolean }>;
+  /** When provided, used for overtime/daily/consecutive suggestions instead of allUsersWithAvailability */
+  qualifiedAlternatives?: PolicyUser[];
   excludeAssignmentId?: string;
   config?: Partial<ShiftPolicyConfig>;
   now?: Date;
@@ -538,6 +540,7 @@ export function validateShiftAssignment(
     allUsersWithSkills,
     allUsersWithLocationCerts,
     allUsersWithAvailability,
+    qualifiedAlternatives,
     excludeAssignmentId,
     config,
     now = new Date(),
@@ -545,6 +548,12 @@ export function validateShiftAssignment(
 
   const blocks: ValidationResult[] = [];
   const warnings: ValidationResult[] = [];
+
+  const alternativeUsers =
+    qualifiedAlternatives ??
+    allUsersWithAvailability
+      .filter((u) => u.hasAvailability)
+      .map((u) => ({ id: u.id, name: u.name, email: u.email }));
 
   const doubleBook = checkDoubleBooking(
     shift,
@@ -577,10 +586,6 @@ export function validateShiftAssignment(
     allUsersWithAvailability
   );
   if (availability) warnings.push(availability);
-
-  const alternativeUsers = allUsersWithAvailability
-    .filter((u) => u.hasAvailability)
-    .map((u) => ({ id: u.id, name: u.name, email: u.email }));
 
   const dailyHours = checkDailyHoursLimit(
     shift,

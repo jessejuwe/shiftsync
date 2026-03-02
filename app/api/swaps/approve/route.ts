@@ -11,7 +11,7 @@ import {
   transition,
   toPrismaStatus,
   fromPrismaStatus,
-  getDefaultExpiration,
+  getSwapRequestExpiration,
 } from "@/lib/domain/swap-workflow";
 import { executeSwap } from "@/lib/domain/swap-execute";
 
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       const swapRequest = await tx.swapRequest.findUnique({
         where: { id: swapRequestId },
+        include: { initiatorShift: { include: { shift: { select: { startsAt: true } } } } },
       });
 
       if (!swapRequest) {
@@ -67,7 +68,11 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      const expiresAt = getDefaultExpiration(swapRequest.createdAt);
+      const expiresAt = getSwapRequestExpiration({
+        initiatorShiftStartsAt: swapRequest.initiatorShift.shift.startsAt,
+        receiverShiftId: swapRequest.receiverShiftId,
+        createdAt: swapRequest.createdAt,
+      });
       const context = {
         initiatorId: swapRequest.initiatorId,
         receiverId: swapRequest.receiverId,

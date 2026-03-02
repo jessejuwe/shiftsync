@@ -83,7 +83,10 @@ export async function POST(request: NextRequest) {
       }
 
       const initiatorPendingCount = await tx.swapRequest.count({
-        where: { initiatorId, status: "PENDING" },
+        where: {
+          initiatorId,
+          status: { in: ["PENDING", "PENDING_MANAGER"] },
+        },
       });
       if (!canCreateSwap(initiatorPendingCount).valid) {
         return {
@@ -96,7 +99,10 @@ export async function POST(request: NextRequest) {
       }
 
       const receiverPendingCount = await tx.swapRequest.count({
-        where: { receiverId, status: "PENDING" },
+        where: {
+          receiverId,
+          status: { in: ["PENDING", "PENDING_MANAGER"] },
+        },
       });
       if (!canCreateSwap(receiverPendingCount).valid) {
         return {
