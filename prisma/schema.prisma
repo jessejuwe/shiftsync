@@ -22,7 +22,8 @@ enum Role {
 }
 
 enum SwapRequestStatus {
-  PENDING
+  PENDING       // REQUESTED or ACCEPTED (receiver hasn't responded or just accepted)
+  PENDING_MANAGER  // Receiver accepted, awaiting manager approval
   APPROVED
   REJECTED
   CANCELLED
@@ -35,8 +36,14 @@ enum NotificationType {
   SWAP_APPROVED
   SWAP_REJECTED
   SWAP_CANCELLED
+  SWAP_PENDING_APPROVAL
   AVAILABILITY_REMINDER
   SYSTEM
+}
+
+enum NotificationPreference {
+  IN_APP_ONLY
+  IN_APP_AND_EMAIL
 }
 
 // =============================================================================
@@ -52,7 +59,9 @@ model User {
   role          Role      @default(STAFF)
   avatarUrl     String?   @map("avatar_url")
   image         String?   // Auth.js / OAuth avatar (synced with avatarUrl when needed)
-  isActive      Boolean   @default(true) @map("is_active")
+  isActive                Boolean               @default(true) @map("is_active")
+  notificationPreference  NotificationPreference @default(IN_APP_ONLY) @map("notification_preference")
+  desiredHoursPerWeek     Float?                @map("desired_hours_per_week") // For fairness analytics
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   lastLoginAt   DateTime? @map("last_login_at")
@@ -127,6 +136,7 @@ model Location {
   name        String
   address     String?
   timezone    String   // IANA timezone (e.g. "America/New_York")
+  hourlyRate  Float?   @map("hourly_rate") // Optional: for overtime cost projection
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -240,12 +250,14 @@ model ShiftSkill {
 }
 
 model ShiftAssignment {
-  id        String   @id @default(cuid())
-  shiftId   String   @map("shift_id")
-  userId    String   @map("user_id")
-  status    String   @default("confirmed") // confirmed, tentative, dropped
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(cuid())
+  shiftId     String    @map("shift_id")
+  userId      String    @map("user_id")
+  status      String    @default("confirmed") // confirmed, tentative, dropped
+  clockedInAt DateTime? @map("clocked_in_at") // When staff clocked in
+  clockedOutAt DateTime? @map("clocked_out_at") // When staff clocked out
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

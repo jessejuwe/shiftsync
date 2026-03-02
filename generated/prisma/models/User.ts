@@ -20,8 +20,18 @@ export type UserModel = runtime.Types.Result.DefaultSelection<Prisma.$UserPayloa
 
 export type AggregateUser = {
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
+}
+
+export type UserAvgAggregateOutputType = {
+  desiredHoursPerWeek: number | null
+}
+
+export type UserSumAggregateOutputType = {
+  desiredHoursPerWeek: number | null
 }
 
 export type UserMinAggregateOutputType = {
@@ -34,6 +44,8 @@ export type UserMinAggregateOutputType = {
   avatarUrl: string | null
   image: string | null
   isActive: boolean | null
+  notificationPreference: $Enums.NotificationPreference | null
+  desiredHoursPerWeek: number | null
   createdAt: Date | null
   updatedAt: Date | null
   lastLoginAt: Date | null
@@ -49,6 +61,8 @@ export type UserMaxAggregateOutputType = {
   avatarUrl: string | null
   image: string | null
   isActive: boolean | null
+  notificationPreference: $Enums.NotificationPreference | null
+  desiredHoursPerWeek: number | null
   createdAt: Date | null
   updatedAt: Date | null
   lastLoginAt: Date | null
@@ -64,12 +78,22 @@ export type UserCountAggregateOutputType = {
   avatarUrl: number
   image: number
   isActive: number
+  notificationPreference: number
+  desiredHoursPerWeek: number
   createdAt: number
   updatedAt: number
   lastLoginAt: number
   _all: number
 }
 
+
+export type UserAvgAggregateInputType = {
+  desiredHoursPerWeek?: true
+}
+
+export type UserSumAggregateInputType = {
+  desiredHoursPerWeek?: true
+}
 
 export type UserMinAggregateInputType = {
   id?: true
@@ -81,6 +105,8 @@ export type UserMinAggregateInputType = {
   avatarUrl?: true
   image?: true
   isActive?: true
+  notificationPreference?: true
+  desiredHoursPerWeek?: true
   createdAt?: true
   updatedAt?: true
   lastLoginAt?: true
@@ -96,6 +122,8 @@ export type UserMaxAggregateInputType = {
   avatarUrl?: true
   image?: true
   isActive?: true
+  notificationPreference?: true
+  desiredHoursPerWeek?: true
   createdAt?: true
   updatedAt?: true
   lastLoginAt?: true
@@ -111,6 +139,8 @@ export type UserCountAggregateInputType = {
   avatarUrl?: true
   image?: true
   isActive?: true
+  notificationPreference?: true
+  desiredHoursPerWeek?: true
   createdAt?: true
   updatedAt?: true
   lastLoginAt?: true
@@ -155,6 +185,18 @@ export type UserAggregateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: UserAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: UserSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: UserMinAggregateInputType
@@ -185,6 +227,8 @@ export type UserGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
   take?: number
   skip?: number
   _count?: UserCountAggregateInputType | true
+  _avg?: UserAvgAggregateInputType
+  _sum?: UserSumAggregateInputType
   _min?: UserMinAggregateInputType
   _max?: UserMaxAggregateInputType
 }
@@ -199,10 +243,14 @@ export type UserGroupByOutputType = {
   avatarUrl: string | null
   image: string | null
   isActive: boolean
+  notificationPreference: $Enums.NotificationPreference
+  desiredHoursPerWeek: number | null
   createdAt: Date
   updatedAt: Date
   lastLoginAt: Date | null
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
 }
@@ -235,6 +283,8 @@ export type UserWhereInput = {
   avatarUrl?: Prisma.StringNullableFilter<"User"> | string | null
   image?: Prisma.StringNullableFilter<"User"> | string | null
   isActive?: Prisma.BoolFilter<"User"> | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFilter<"User"> | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.FloatNullableFilter<"User"> | number | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   lastLoginAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
@@ -260,6 +310,8 @@ export type UserOrderByWithRelationInput = {
   avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   image?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  notificationPreference?: Prisma.SortOrder
+  desiredHoursPerWeek?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -288,6 +340,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   avatarUrl?: Prisma.StringNullableFilter<"User"> | string | null
   image?: Prisma.StringNullableFilter<"User"> | string | null
   isActive?: Prisma.BoolFilter<"User"> | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFilter<"User"> | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.FloatNullableFilter<"User"> | number | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   lastLoginAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
@@ -313,12 +367,16 @@ export type UserOrderByWithAggregationInput = {
   avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   image?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  notificationPreference?: Prisma.SortOrder
+  desiredHoursPerWeek?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
+  _avg?: Prisma.UserAvgOrderByAggregateInput
   _max?: Prisma.UserMaxOrderByAggregateInput
   _min?: Prisma.UserMinOrderByAggregateInput
+  _sum?: Prisma.UserSumOrderByAggregateInput
 }
 
 export type UserScalarWhereWithAggregatesInput = {
@@ -334,6 +392,8 @@ export type UserScalarWhereWithAggregatesInput = {
   avatarUrl?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   image?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceWithAggregatesFilter<"User"> | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.FloatNullableWithAggregatesFilter<"User"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   lastLoginAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
@@ -349,6 +409,8 @@ export type UserCreateInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -374,6 +436,8 @@ export type UserUncheckedCreateInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -399,6 +463,8 @@ export type UserUpdateInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -424,6 +490,8 @@ export type UserUncheckedUpdateInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -449,6 +517,8 @@ export type UserCreateManyInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -464,6 +534,8 @@ export type UserUpdateManyMutationInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -479,6 +551,8 @@ export type UserUncheckedUpdateManyInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -494,9 +568,15 @@ export type UserCountOrderByAggregateInput = {
   avatarUrl?: Prisma.SortOrder
   image?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  notificationPreference?: Prisma.SortOrder
+  desiredHoursPerWeek?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
+}
+
+export type UserAvgOrderByAggregateInput = {
+  desiredHoursPerWeek?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -509,6 +589,8 @@ export type UserMaxOrderByAggregateInput = {
   avatarUrl?: Prisma.SortOrder
   image?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  notificationPreference?: Prisma.SortOrder
+  desiredHoursPerWeek?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
@@ -524,9 +606,15 @@ export type UserMinOrderByAggregateInput = {
   avatarUrl?: Prisma.SortOrder
   image?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  notificationPreference?: Prisma.SortOrder
+  desiredHoursPerWeek?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
+}
+
+export type UserSumOrderByAggregateInput = {
+  desiredHoursPerWeek?: Prisma.SortOrder
 }
 
 export type UserScalarRelationFilter = {
@@ -557,6 +645,18 @@ export type EnumRoleFieldUpdateOperationsInput = {
 
 export type BoolFieldUpdateOperationsInput = {
   set?: boolean
+}
+
+export type EnumNotificationPreferenceFieldUpdateOperationsInput = {
+  set?: $Enums.NotificationPreference
+}
+
+export type NullableFloatFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
 }
 
 export type DateTimeFieldUpdateOperationsInput = {
@@ -715,6 +815,8 @@ export type UserCreateWithoutAccountsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -739,6 +841,8 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -779,6 +883,8 @@ export type UserUpdateWithoutAccountsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -803,6 +909,8 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -827,6 +935,8 @@ export type UserCreateWithoutSessionsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -851,6 +961,8 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -891,6 +1003,8 @@ export type UserUpdateWithoutSessionsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -915,6 +1029,8 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -939,6 +1055,8 @@ export type UserCreateWithoutStaffSkillsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -963,6 +1081,8 @@ export type UserUncheckedCreateWithoutStaffSkillsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1003,6 +1123,8 @@ export type UserUpdateWithoutStaffSkillsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1027,6 +1149,8 @@ export type UserUncheckedUpdateWithoutStaffSkillsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1051,6 +1175,8 @@ export type UserCreateWithoutCertificationsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1075,6 +1201,8 @@ export type UserUncheckedCreateWithoutCertificationsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1115,6 +1243,8 @@ export type UserUpdateWithoutCertificationsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1139,6 +1269,8 @@ export type UserUncheckedUpdateWithoutCertificationsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1163,6 +1295,8 @@ export type UserCreateWithoutShiftAssignmentsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1187,6 +1321,8 @@ export type UserUncheckedCreateWithoutShiftAssignmentsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1227,6 +1363,8 @@ export type UserUpdateWithoutShiftAssignmentsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1251,6 +1389,8 @@ export type UserUncheckedUpdateWithoutShiftAssignmentsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1275,6 +1415,8 @@ export type UserCreateWithoutAvailabilityWindowsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1299,6 +1441,8 @@ export type UserUncheckedCreateWithoutAvailabilityWindowsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1339,6 +1483,8 @@ export type UserUpdateWithoutAvailabilityWindowsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1363,6 +1509,8 @@ export type UserUncheckedUpdateWithoutAvailabilityWindowsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1387,6 +1535,8 @@ export type UserCreateWithoutSwapRequestsInitiatedInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1411,6 +1561,8 @@ export type UserUncheckedCreateWithoutSwapRequestsInitiatedInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1440,6 +1592,8 @@ export type UserCreateWithoutSwapRequestsReceivedInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1464,6 +1618,8 @@ export type UserUncheckedCreateWithoutSwapRequestsReceivedInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1504,6 +1660,8 @@ export type UserUpdateWithoutSwapRequestsInitiatedInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1528,6 +1686,8 @@ export type UserUncheckedUpdateWithoutSwapRequestsInitiatedInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1563,6 +1723,8 @@ export type UserUpdateWithoutSwapRequestsReceivedInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1587,6 +1749,8 @@ export type UserUncheckedUpdateWithoutSwapRequestsReceivedInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1611,6 +1775,8 @@ export type UserCreateWithoutNotificationsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1635,6 +1801,8 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1675,6 +1843,8 @@ export type UserUpdateWithoutNotificationsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1699,6 +1869,8 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1723,6 +1895,8 @@ export type UserCreateWithoutAuditLogsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1747,6 +1921,8 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   avatarUrl?: string | null
   image?: string | null
   isActive?: boolean
+  notificationPreference?: $Enums.NotificationPreference
+  desiredHoursPerWeek?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -1787,6 +1963,8 @@ export type UserUpdateWithoutAuditLogsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1811,6 +1989,8 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationPreference?: Prisma.EnumNotificationPreferenceFieldUpdateOperationsInput | $Enums.NotificationPreference
+  desiredHoursPerWeek?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1947,6 +2127,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   avatarUrl?: boolean
   image?: boolean
   isActive?: boolean
+  notificationPreference?: boolean
+  desiredHoursPerWeek?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastLoginAt?: boolean
@@ -1973,6 +2155,8 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   avatarUrl?: boolean
   image?: boolean
   isActive?: boolean
+  notificationPreference?: boolean
+  desiredHoursPerWeek?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastLoginAt?: boolean
@@ -1988,6 +2172,8 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   avatarUrl?: boolean
   image?: boolean
   isActive?: boolean
+  notificationPreference?: boolean
+  desiredHoursPerWeek?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastLoginAt?: boolean
@@ -2003,12 +2189,14 @@ export type UserSelectScalar = {
   avatarUrl?: boolean
   image?: boolean
   isActive?: boolean
+  notificationPreference?: boolean
+  desiredHoursPerWeek?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastLoginAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "emailVerified" | "passwordHash" | "name" | "role" | "avatarUrl" | "image" | "isActive" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "emailVerified" | "passwordHash" | "name" | "role" | "avatarUrl" | "image" | "isActive" | "notificationPreference" | "desiredHoursPerWeek" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
@@ -2049,6 +2237,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     avatarUrl: string | null
     image: string | null
     isActive: boolean
+    notificationPreference: $Enums.NotificationPreference
+    desiredHoursPerWeek: number | null
     createdAt: Date
     updatedAt: Date
     lastLoginAt: Date | null
@@ -2494,6 +2684,8 @@ export interface UserFieldRefs {
   readonly avatarUrl: Prisma.FieldRef<"User", 'String'>
   readonly image: Prisma.FieldRef<"User", 'String'>
   readonly isActive: Prisma.FieldRef<"User", 'Boolean'>
+  readonly notificationPreference: Prisma.FieldRef<"User", 'NotificationPreference'>
+  readonly desiredHoursPerWeek: Prisma.FieldRef<"User", 'Float'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly lastLoginAt: Prisma.FieldRef<"User", 'DateTime'>

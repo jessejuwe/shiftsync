@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
@@ -100,11 +101,15 @@ export function SwapRequestModal({
       return data;
     },
     onSuccess: () => {
+      toast.success("Swap request sent");
       onSuccess();
       onOpenChange(false);
       setReceiverId("");
       setReceiverShiftId("");
       setMessage("");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to request swap");
     },
   });
 

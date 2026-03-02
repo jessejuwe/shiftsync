@@ -31,6 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 import { cn } from "@/lib/utils";
 import { getQueryClient } from "@/app/get-query-client";
 
@@ -44,12 +46,15 @@ interface StaffFairness {
   equityScore: number;
   isOverScheduled: boolean;
   isUnderScheduled: boolean;
+  desiredHoursPerWeek?: number;
+  targetHours?: number;
 }
 
 interface FairnessDashboardData {
   weekStart: string;
   weekEnd: string;
   locationId: string | null;
+  weekCount?: number;
   targetHours: number;
   staff: StaffFairness[];
 }
@@ -64,6 +69,8 @@ const hoursChartConfig = {
     color: "hsl(var(--muted-foreground))",
   },
 } satisfies ChartConfig;
+
+const PAGE_SIZE = 10;
 
 const premiumChartConfig = {
   premium: {
@@ -88,10 +95,12 @@ export function FairnessDashboard() {
     },
   });
 
+  const [weekCount, setWeekCount] = useState(1);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["fairness-dashboard", weekStart, locationId || "all"],
+    queryKey: ["fairness-dashboard", weekStart, locationId || "all", weekCount],
     queryFn: async () => {
-      const params = new URLSearchParams({ weekStart });
+      const params = new URLSearchParams({ weekStart, weekCount: String(weekCount) });
       if (locationId) params.set("locationId", locationId);
       const res = await fetch(`/api/fairness/dashboard?${params}`);
       if (!res.ok) throw new Error("Failed to fetch fairness data");
@@ -121,24 +130,42 @@ export function FairnessDashboard() {
         queryClient.invalidateQueries({ queryKey: ["fairness-dashboard"] });
         queryClient.refetchQueries({ queryKey: ["fairness-dashboard"] });
       },
+      onClockIn: () => {
+        queryClient.invalidateQueries({ queryKey: ["on-duty"] });
+      },
+      onClockOut: () => {
+        queryClient.invalidateQueries({ queryKey: ["on-duty"] });
+      },
     },
   });
 
   const staff = data?.staff ?? [];
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems: paginatedStaff,
+    totalCount,
+    showPagination,
+  } = useTablePagination(staff, PAGE_SIZE, [weekOffset, locationId, weekCount]);
   const targetHours = data?.targetHours ?? 40;
+  const periodWeeks = data?.weekCount ?? 1;
   const weekStartDate = data?.weekStart
     ? new Date(data.weekStart)
     : new Date(weekStart);
   const weekEndDate = data?.weekEnd
     ? new Date(data.weekEnd)
-    : new Date(weekStartDate);
-  weekEndDate.setDate(weekEndDate.getDate() + 6);
+    : (() => {
+        const d = new Date(weekStartDate);
+        d.setDate(d.getDate() + (periodWeeks * 7 - 1));
+        return d;
+      })();
 
+  const chartTarget = targetHours * periodWeeks;
   const hoursChartData = staff.map((s) => ({
     name: s.name.split(" ")[0] ?? s.name,
     fullName: s.name,
     hours: s.totalHours,
-    target: targetHours,
+    target: chartTarget,
     premium: s.premiumShifts,
   }));
 
@@ -152,8 +179,21 @@ export function FairnessDashboard() {
             scheduled
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Select
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={String(weekCount)}
+              onValueChange={(v) => setWeekCount(parseInt(v, 10))}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 week</SelectItem>
+                <SelectItem value="2">2 weeks</SelectItem>
+                <SelectItem value="4">4 weeks</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
             value={locationId || "all"}
             onValueChange={(v) => setLocationId(v === "all" ? "" : v)}
           >
@@ -212,8 +252,7 @@ export function FairnessDashboard() {
                   Hours per staff
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
-                  Target: {targetHours}h • Green = on target, Red = over, Amber
-                  = under
+                  Target: {chartTarget}h ({periodWeeks} week{periodWeeks > 1 ? "s" : ""}) • Green = on target, Red = over, Amber = under
                 </p>
               </CardHeader>
               <CardContent>
@@ -329,6 +368,7 @@ export function FairnessDashboard() {
                   <TableRow>
                     <TableHead>Staff</TableHead>
                     <TableHead className="text-right">Hours</TableHead>
+                    <TableHead className="text-right">Desired</TableHead>
                     <TableHead className="text-right">Δ vs target</TableHead>
                     <TableHead className="text-right">Premium</TableHead>
                     <TableHead className="text-right">Equity</TableHead>
@@ -336,7 +376,7 @@ export function FairnessDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {staff.map((s) => {
+                  {paginatedStaff.map((s) => {
                     const rowHighlight = s.isOverScheduled
                       ? "bg-red-50 dark:bg-red-950/20 border-l-4 border-l-red-500"
                       : s.isUnderScheduled
@@ -357,6 +397,11 @@ export function FairnessDashboard() {
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           {s.totalHours}h
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {s.desiredHoursPerWeek != null
+                            ? `${s.desiredHoursPerWeek}h/wk`
+                            : "—"}
                         </TableCell>
                         <TableCell
                           className={cn(
@@ -408,6 +453,14 @@ export function FairnessDashboard() {
                   })}
                 </TableBody>
               </Table>
+              {showPagination && (
+                <TablePagination
+                  currentPage={currentPage}
+                  onPageChange={setCurrentPage}
+                  totalCount={totalCount}
+                  pageSize={PAGE_SIZE}
+                />
+              )}
             </CardContent>
           </Card>
         </>

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { broadcastSwapApproved } from "@/lib/pusher-events";
+import {
+  broadcastSwapApproved,
+  broadcastShiftAssigned,
+} from "@/lib/pusher-events";
+import { REQUIRES_MANAGER_APPROVAL } from "@/lib/swap-config";
 import {
   SwapState,
   SwapEvent,
@@ -66,7 +70,7 @@ export async function POST(
         initiatorId: swapRequest.initiatorId,
         receiverId: swapRequest.receiverId,
         actorId,
-        requiresManagerApproval: false,
+        requiresManagerApproval: REQUIRES_MANAGER_APPROVAL,
         expiresAt,
       };
 
@@ -91,7 +95,29 @@ export async function POST(
       if (
         action === "accept" &&
         newState === SwapState.ACCEPTED &&
-        !context.requiresManagerApproval
+        REQUIRES_MANAGER_APPROVAL
+      ) {
+        const approvalResult = transition(
+          newState,
+          SwapEvent.REQUEST_MANAGER_APPROVAL,
+          context
+        );
+        if (!approvalResult.success || !approvalResult.newState) {
+          return {
+            success: false as const,
+            error: {
+              code: "TRANSITION_FAILED",
+              message:
+                approvalResult.error ?? "Cannot request manager approval",
+            },
+          };
+        }
+        transitionResult = approvalResult;
+        newState = approvalResult.newState;
+      } else if (
+        action === "accept" &&
+        newState === SwapState.ACCEPTED &&
+        !REQUIRES_MANAGER_APPROVAL
       ) {
         const confirmResult = transition(newState, SwapEvent.CONFIRM, context);
         if (!confirmResult.success || !confirmResult.newState) {
@@ -111,42 +137,8 @@ export async function POST(
       const prismaStatus =
         transitionResult.prismaStatusOverride ?? toPrismaStatus(newState);
 
-      await tx.swapRequest.update({
-        where: { id },
-        data: { status: prismaStatus, respondedAt: new Date() },
-      });
-
-      for (const n of transitionResult.notifications) {
-        const userId =
-          n.target === "initiator" ? swapRequest.initiatorId : swapRequest.receiverId;
-        const notificationType =
-          n.type === "SWAP_ACCEPTED" || n.type === "SWAP_APPROVED"
-            ? "SWAP_APPROVED"
-            : "SWAP_REJECTED";
-        await tx.notification.create({
-          data: {
-            userId,
-            type: notificationType,
-            title: n.title,
-            body: n.body,
-            data: (n.data ?? {}) as object,
-          },
-        });
-      }
-
-      await tx.auditLog.create({
-        data: {
-          userId: actorId,
-          action: action === "accept" ? "SWAP_ACCEPT" : "SWAP_REJECT",
-          entityType: "SwapRequest",
-          entityId: id,
-          changes: {
-            previousStatus: swapRequest.status,
-            newStatus: prismaStatus,
-          },
-        },
-      });
-
+      // Run executeSwap BEFORE status/notifications so validation failures
+      // don't send "Swap Approved" to users.
       if (newState === SwapState.APPROVED) {
         const swapResult = await executeSwap(
           tx,
@@ -171,6 +163,63 @@ export async function POST(
           };
         }
       }
+
+      // Handle "manager" notification target: notify all admins and managers
+      for (const n of transitionResult.notifications) {
+        if (n.target === "manager") {
+          const managers = await tx.user.findMany({
+            where: { role: { in: ["ADMIN", "MANAGER"] }, isActive: true },
+            select: { id: true },
+          });
+          for (const m of managers) {
+            await tx.notification.create({
+              data: {
+                userId: m.id,
+                type: "SWAP_PENDING_APPROVAL",
+                title: n.title,
+                body: n.body,
+                data: (n.data ?? {}) as object,
+              },
+            });
+          }
+        } else {
+          const userId =
+            n.target === "initiator" ? swapRequest.initiatorId : swapRequest.receiverId;
+          const notificationType =
+            n.type === "SWAP_ACCEPTED" || n.type === "SWAP_APPROVED"
+              ? "SWAP_APPROVED"
+              : n.type === "SWAP_PENDING_APPROVAL"
+                ? "SWAP_PENDING_APPROVAL"
+                : "SWAP_REJECTED";
+          await tx.notification.create({
+            data: {
+              userId,
+              type: notificationType,
+              title: n.title,
+              body: n.body,
+              data: (n.data ?? {}) as object,
+            },
+          });
+        }
+      }
+
+      await tx.swapRequest.update({
+        where: { id },
+        data: { status: prismaStatus, respondedAt: new Date() },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: actorId,
+          action: action === "accept" ? "SWAP_ACCEPT" : "SWAP_REJECT",
+          entityType: "SwapRequest",
+          entityId: id,
+          changes: {
+            previousStatus: swapRequest.status,
+            newStatus: prismaStatus,
+          },
+        },
+      });
 
       return {
         success: true as const,
@@ -204,6 +253,11 @@ export async function POST(
     if (result.data.swapRequest.newState === SwapState.APPROVED) {
       const swapRequest = await prisma.swapRequest.findUnique({
         where: { id },
+        include: {
+          initiatorShift: {
+            include: { shift: { select: { id: true, locationId: true } } },
+          },
+        },
       });
       if (swapRequest) {
         await broadcastSwapApproved(
@@ -215,6 +269,30 @@ export async function POST(
             receiverId: swapRequest.receiverId,
           }
         );
+        await broadcastShiftAssigned(
+          swapRequest.receiverId,
+          swapRequest.initiatorShift.shift.locationId,
+          {
+            assignmentId: swapRequest.initiatorShiftId,
+            shiftId: swapRequest.initiatorShift.shift.id,
+          }
+        );
+        if (swapRequest.receiverShiftId) {
+          const receiverAssignment = await prisma.shiftAssignment.findUnique({
+            where: { id: swapRequest.receiverShiftId },
+            include: { shift: { select: { id: true, locationId: true } } },
+          });
+          if (receiverAssignment) {
+            await broadcastShiftAssigned(
+              swapRequest.initiatorId,
+              receiverAssignment.shift.locationId,
+              {
+                assignmentId: swapRequest.receiverShiftId,
+                shiftId: receiverAssignment.shift.id,
+              }
+            );
+          }
+        }
       }
     }
 

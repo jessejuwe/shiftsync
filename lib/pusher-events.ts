@@ -20,12 +20,15 @@ export const CHANNELS = {
 
 export const PUSHER_EVENTS = {
   SCHEDULE_PUBLISHED: "schedule-published",
+  SCHEDULE_UNPUBLISHED: "schedule-unpublished",
   SHIFT_ASSIGNED: "shift-assigned",
   SHIFT_UNASSIGNED: "shift-unassigned",
   SHIFT_EDITED: "shift-edited",
   SWAP_REQUESTED: "swap-requested",
   SWAP_APPROVED: "swap-approved",
   ASSIGNMENT_CONFLICT: "assignment-conflict",
+  CLOCK_IN: "clock-in",
+  CLOCK_OUT: "clock-out",
 } as const;
 
 export type PusherEventType = (typeof PUSHER_EVENTS)[keyof typeof PUSHER_EVENTS];
@@ -37,6 +40,12 @@ export type PusherEventType = (typeof PUSHER_EVENTS)[keyof typeof PUSHER_EVENTS]
 export interface SchedulePublishedPayload {
   locationId: string;
   publishedAt: string; // ISO
+  shiftIds?: string[];
+}
+
+export interface ScheduleUnpublishedPayload {
+  locationId: string;
+  unpublishedAt: string; // ISO
   shiftIds?: string[];
 }
 
@@ -81,6 +90,14 @@ export interface ShiftUnassignedPayload {
   locationId: string;
 }
 
+export interface ClockInOutPayload {
+  assignmentId: string;
+  shiftId: string;
+  userId: string;
+  locationId: string;
+  clockedAt: string; // ISO
+}
+
 // =============================================================================
 // BROADCAST HELPERS
 // =============================================================================
@@ -107,6 +124,22 @@ export async function broadcastSchedulePublished(
     ...payload,
     locationId,
   } as SchedulePublishedPayload);
+}
+
+/**
+ * Emit when a schedule is unpublished for a location.
+ */
+export async function broadcastScheduleUnpublished(
+  locationId: string,
+  payload: Omit<ScheduleUnpublishedPayload, "locationId">
+): Promise<void> {
+  const pusher = getPusherSafe();
+  if (!pusher) return;
+
+  await pusher.trigger(CHANNELS.schedule(locationId), PUSHER_EVENTS.SCHEDULE_UNPUBLISHED, {
+    ...payload,
+    locationId,
+  } as ScheduleUnpublishedPayload);
 }
 
 /**
@@ -191,6 +224,24 @@ export async function broadcastSwapApproved(
     pusher.trigger(CHANNELS.user(initiatorId), PUSHER_EVENTS.SWAP_APPROVED, payload),
     pusher.trigger(CHANNELS.user(receiverId), PUSHER_EVENTS.SWAP_APPROVED, payload),
   ]);
+}
+
+/**
+ * Emit when staff clocks in or out. Broadcasts to schedule channel for on-duty updates.
+ */
+export async function broadcastClockInOut(
+  locationId: string,
+  event: "clock-in" | "clock-out",
+  payload: ClockInOutPayload
+): Promise<void> {
+  const pusher = getPusherSafe();
+  if (!pusher) return;
+
+  await pusher.trigger(
+    CHANNELS.schedule(locationId),
+    event === "clock-in" ? PUSHER_EVENTS.CLOCK_IN : PUSHER_EVENTS.CLOCK_OUT,
+    payload
+  );
 }
 
 /**

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -107,6 +108,17 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Sign in required" },
+      { status: 401 }
+    );
+  }
+
+  const role = (session.user as { role?: string })?.role;
+  const isStaff = role === "STAFF";
+
   const { searchParams } = new URL(request.url);
   const locationId = searchParams.get("locationId");
   const from = searchParams.get("from");
@@ -114,6 +126,7 @@ export async function GET(request: NextRequest) {
 
   const where: Record<string, unknown> = {};
   if (locationId) where.locationId = locationId;
+  if (isStaff) where.isPublished = true;
   if (from || to) {
     where.startsAt = {};
     if (from) (where.startsAt as Record<string, Date>).gte = new Date(from);
@@ -148,6 +161,8 @@ export async function GET(request: NextRequest) {
         userId: a.userId,
         user: a.user,
         status: a.status,
+        clockedInAt: a.clockedInAt?.toISOString() ?? null,
+        clockedOutAt: a.clockedOutAt?.toISOString() ?? null,
       })),
     })),
   });

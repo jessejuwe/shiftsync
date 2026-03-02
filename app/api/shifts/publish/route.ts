@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { broadcastSchedulePublished } from "@/lib/pusher-events";
 
 /**
  * POST /api/shifts/publish
  * Publish schedule for a location and broadcast to real-time subscribers.
+ * Admin/Manager only.
  */
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  if (role !== "ADMIN" && role !== "MANAGER") {
+    return NextResponse.json(
+      { code: "FORBIDDEN", message: "Admin or Manager access required" },
+      { status: 403 }
+    );
+  }
+
   let body: { locationId: string; shiftIds?: string[] };
   try {
     body = await request.json();

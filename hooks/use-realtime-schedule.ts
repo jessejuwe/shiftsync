@@ -6,12 +6,14 @@ import {
   CHANNELS,
   PUSHER_EVENTS,
   type SchedulePublishedPayload,
+  type ScheduleUnpublishedPayload,
   type ShiftAssignedPayload,
   type ShiftUnassignedPayload,
   type ShiftEditedPayload,
   type SwapRequestedPayload,
   type SwapApprovedPayload,
   type AssignmentConflictPayload,
+  type ClockInOutPayload,
 } from "@/lib/pusher-events";
 
 // =============================================================================
@@ -20,12 +22,15 @@ import {
 
 export interface RealtimeScheduleCallbacks {
   onSchedulePublished?: (payload: SchedulePublishedPayload) => void;
+  onScheduleUnpublished?: (payload: ScheduleUnpublishedPayload) => void;
   onShiftAssigned?: (payload: ShiftAssignedPayload) => void;
   onShiftUnassigned?: (payload: ShiftUnassignedPayload) => void;
   onShiftEdited?: (payload: ShiftEditedPayload) => void;
   onSwapRequested?: (payload: SwapRequestedPayload) => void;
   onSwapApproved?: (payload: SwapApprovedPayload) => void;
   onAssignmentConflict?: (payload: AssignmentConflictPayload) => void;
+  onClockIn?: (payload: ClockInOutPayload) => void;
+  onClockOut?: (payload: ClockInOutPayload) => void;
 }
 
 export interface UseRealtimeScheduleOptions {
@@ -92,26 +97,32 @@ export function useRealtimeSchedule({
         PUSHER_EVENTS.SCHEDULE_PUBLISHED,
         (payload: SchedulePublishedPayload) => {
           callbacksRef.current.onSchedulePublished?.(payload);
-        }
+        },
       );
       ch.bind(
-        PUSHER_EVENTS.SHIFT_ASSIGNED,
-        (payload: ShiftAssignedPayload) => {
-          callbacksRef.current.onShiftAssigned?.(payload);
-        }
+        PUSHER_EVENTS.SCHEDULE_UNPUBLISHED,
+        (payload: ScheduleUnpublishedPayload) => {
+          callbacksRef.current.onScheduleUnpublished?.(payload);
+        },
       );
+      ch.bind(PUSHER_EVENTS.SHIFT_ASSIGNED, (payload: ShiftAssignedPayload) => {
+        callbacksRef.current.onShiftAssigned?.(payload);
+      });
       ch.bind(
         PUSHER_EVENTS.SHIFT_UNASSIGNED,
         (payload: ShiftUnassignedPayload) => {
           callbacksRef.current.onShiftUnassigned?.(payload);
-        }
+        },
       );
-      ch.bind(
-        PUSHER_EVENTS.SHIFT_EDITED,
-        (payload: ShiftEditedPayload) => {
-          callbacksRef.current.onShiftEdited?.(payload);
-        }
-      );
+      ch.bind(PUSHER_EVENTS.SHIFT_EDITED, (payload: ShiftEditedPayload) => {
+        callbacksRef.current.onShiftEdited?.(payload);
+      });
+      ch.bind(PUSHER_EVENTS.CLOCK_IN, (payload: ClockInOutPayload) => {
+        callbacksRef.current.onClockIn?.(payload);
+      });
+      ch.bind(PUSHER_EVENTS.CLOCK_OUT, (payload: ClockInOutPayload) => {
+        callbacksRef.current.onClockOut?.(payload);
+      });
     }
 
     let userChannel: Channel | null = null;
@@ -121,19 +132,19 @@ export function useRealtimeSchedule({
         PUSHER_EVENTS.SWAP_REQUESTED,
         (payload: SwapRequestedPayload) => {
           callbacksRef.current.onSwapRequested?.(payload);
-        }
+        },
       );
       userChannel.bind(
         PUSHER_EVENTS.SWAP_APPROVED,
         (payload: SwapApprovedPayload) => {
           callbacksRef.current.onSwapApproved?.(payload);
-        }
+        },
       );
       userChannel.bind(
         PUSHER_EVENTS.ASSIGNMENT_CONFLICT,
         (payload: AssignmentConflictPayload) => {
           callbacksRef.current.onAssignmentConflict?.(payload);
-        }
+        },
       );
     }
 

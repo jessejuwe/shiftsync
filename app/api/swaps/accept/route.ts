@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { broadcastSwapApproved } from "@/lib/pusher-events";
+import {
+  broadcastSwapApproved,
+  broadcastShiftAssigned,
+} from "@/lib/pusher-events";
 import {
   SwapState,
   SwapEvent,
@@ -97,6 +100,33 @@ export async function POST(request: NextRequest) {
       const prismaStatus =
         transitionResult.prismaStatusOverride ?? toPrismaStatus(newState);
 
+      // Run executeSwap BEFORE status/notifications so validation failures
+      // don't send "Swap Approved" to users.
+      if (newState === SwapState.APPROVED) {
+        const swapResult = await executeSwap(
+          tx,
+          {
+            swapRequestId,
+            initiatorId: swapRequest.initiatorId,
+            receiverId: swapRequest.receiverId,
+            initiatorShiftId: swapRequest.initiatorShiftId,
+            receiverShiftId: swapRequest.receiverShiftId,
+          },
+          actorId
+        );
+
+        if (!swapResult.success) {
+          return {
+            success: false as const,
+            error: {
+              code: "VALIDATION_FAILED",
+              message: swapResult.error,
+              details: swapResult.validationBlocks,
+            },
+          };
+        }
+      }
+
       await tx.swapRequest.update({
         where: { id: swapRequestId },
         data: { status: prismaStatus, respondedAt: new Date() },
@@ -133,31 +163,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      if (newState === SwapState.APPROVED) {
-        const swapResult = await executeSwap(
-          tx,
-          {
-            swapRequestId,
-            initiatorId: swapRequest.initiatorId,
-            receiverId: swapRequest.receiverId,
-            initiatorShiftId: swapRequest.initiatorShiftId,
-            receiverShiftId: swapRequest.receiverShiftId,
-          },
-          actorId
-        );
-
-        if (!swapResult.success) {
-          return {
-            success: false as const,
-            error: {
-              code: "VALIDATION_FAILED",
-              message: swapResult.error,
-              details: swapResult.validationBlocks,
-            },
-          };
-        }
-      }
-
       return {
         success: true as const,
         data: {
@@ -190,6 +195,11 @@ export async function POST(request: NextRequest) {
     if (result.data.swapRequest.newState === SwapState.APPROVED) {
       const swapRequest = await prisma.swapRequest.findUnique({
         where: { id: swapRequestId },
+        include: {
+          initiatorShift: {
+            include: { shift: { select: { id: true, locationId: true } } },
+          },
+        },
       });
       if (swapRequest) {
         await broadcastSwapApproved(
@@ -201,6 +211,30 @@ export async function POST(request: NextRequest) {
             receiverId: swapRequest.receiverId,
           }
         );
+        await broadcastShiftAssigned(
+          swapRequest.receiverId,
+          swapRequest.initiatorShift.shift.locationId,
+          {
+            assignmentId: swapRequest.initiatorShiftId,
+            shiftId: swapRequest.initiatorShift.shift.id,
+          }
+        );
+        if (swapRequest.receiverShiftId) {
+          const receiverAssignment = await prisma.shiftAssignment.findUnique({
+            where: { id: swapRequest.receiverShiftId },
+            include: { shift: { select: { id: true, locationId: true } } },
+          });
+          if (receiverAssignment) {
+            await broadcastShiftAssigned(
+              swapRequest.initiatorId,
+              receiverAssignment.shift.locationId,
+              {
+                assignmentId: swapRequest.receiverShiftId,
+                shiftId: receiverAssignment.shift.id,
+              }
+            );
+          }
+        }
       }
     }
 

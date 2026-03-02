@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +18,16 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, FileText, LayoutDashboard, Clock, LogOut } from "lucide-react";
+import { NotificationCenter } from "@/components/features/notifications/notification-center";
+import {
+  CalendarDays,
+  FileText,
+  LayoutDashboard,
+  Clock,
+  LogOut,
+  Settings,
+  Users,
+} from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -26,25 +35,27 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const role = (session?.user as { role?: string } | undefined)?.role;
   const isAdmin = role === "ADMIN";
+  const isManager = role === "MANAGER";
   const isStaff = role === "STAFF";
-
-  // Redirect staff from dashboard to shifts
-  useEffect(() => {
-    if (status === "authenticated" && isStaff && pathname === "/") {
-      router.replace("/shifts");
-    }
-  }, [status, isStaff, pathname, router]);
+  const canManageStaff = isAdmin || isManager;
 
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader className="border-b border-sidebar-border">
-          <div className="px-4 py-3 font-semibold text-sidebar-foreground">
-            ShiftSync
+          <div className="flex items-center justify-between py-3">
+            <Image
+              src="/assets/logo.png"
+              alt="ShiftSync"
+              width={120}
+              height={32}
+              className="h-8 w-auto object-contain"
+              priority
+            />
+            <NotificationCenter />
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -70,13 +81,26 @@ export default function DashboardLayout({
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/availability"}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/availability"}
+                >
                   <Link href="/availability">
                     <Clock />
                     <span>Availability</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {canManageStaff && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/staff"}>
+                    <Link href="/staff">
+                      <Users />
+                      <span>Staff Skills</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               {isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === "/audit"}>
@@ -87,6 +111,14 @@ export default function DashboardLayout({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/settings"}>
+                  <Link href="/settings">
+                    <Settings />
+                    <span>Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>

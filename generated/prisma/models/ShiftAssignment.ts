@@ -29,6 +29,8 @@ export type ShiftAssignmentMinAggregateOutputType = {
   shiftId: string | null
   userId: string | null
   status: string | null
+  clockedInAt: Date | null
+  clockedOutAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -38,6 +40,8 @@ export type ShiftAssignmentMaxAggregateOutputType = {
   shiftId: string | null
   userId: string | null
   status: string | null
+  clockedInAt: Date | null
+  clockedOutAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -47,6 +51,8 @@ export type ShiftAssignmentCountAggregateOutputType = {
   shiftId: number
   userId: number
   status: number
+  clockedInAt: number
+  clockedOutAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -58,6 +64,8 @@ export type ShiftAssignmentMinAggregateInputType = {
   shiftId?: true
   userId?: true
   status?: true
+  clockedInAt?: true
+  clockedOutAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -67,6 +75,8 @@ export type ShiftAssignmentMaxAggregateInputType = {
   shiftId?: true
   userId?: true
   status?: true
+  clockedInAt?: true
+  clockedOutAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -76,6 +86,8 @@ export type ShiftAssignmentCountAggregateInputType = {
   shiftId?: true
   userId?: true
   status?: true
+  clockedInAt?: true
+  clockedOutAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -158,6 +170,8 @@ export type ShiftAssignmentGroupByOutputType = {
   shiftId: string
   userId: string
   status: string
+  clockedInAt: Date | null
+  clockedOutAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: ShiftAssignmentCountAggregateOutputType | null
@@ -188,6 +202,8 @@ export type ShiftAssignmentWhereInput = {
   shiftId?: Prisma.StringFilter<"ShiftAssignment"> | string
   userId?: Prisma.StringFilter<"ShiftAssignment"> | string
   status?: Prisma.StringFilter<"ShiftAssignment"> | string
+  clockedInAt?: Prisma.DateTimeNullableFilter<"ShiftAssignment"> | Date | string | null
+  clockedOutAt?: Prisma.DateTimeNullableFilter<"ShiftAssignment"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ShiftAssignment"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ShiftAssignment"> | Date | string
   shift?: Prisma.XOR<Prisma.ShiftScalarRelationFilter, Prisma.ShiftWhereInput>
@@ -200,6 +216,8 @@ export type ShiftAssignmentOrderByWithRelationInput = {
   shiftId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  clockedInAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  clockedOutAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   shift?: Prisma.ShiftOrderByWithRelationInput
@@ -216,6 +234,8 @@ export type ShiftAssignmentWhereUniqueInput = Prisma.AtLeast<{
   shiftId?: Prisma.StringFilter<"ShiftAssignment"> | string
   userId?: Prisma.StringFilter<"ShiftAssignment"> | string
   status?: Prisma.StringFilter<"ShiftAssignment"> | string
+  clockedInAt?: Prisma.DateTimeNullableFilter<"ShiftAssignment"> | Date | string | null
+  clockedOutAt?: Prisma.DateTimeNullableFilter<"ShiftAssignment"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ShiftAssignment"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ShiftAssignment"> | Date | string
   shift?: Prisma.XOR<Prisma.ShiftScalarRelationFilter, Prisma.ShiftWhereInput>
@@ -228,6 +248,8 @@ export type ShiftAssignmentOrderByWithAggregationInput = {
   shiftId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  clockedInAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  clockedOutAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ShiftAssignmentCountOrderByAggregateInput
@@ -243,6 +265,8 @@ export type ShiftAssignmentScalarWhereWithAggregatesInput = {
   shiftId?: Prisma.StringWithAggregatesFilter<"ShiftAssignment"> | string
   userId?: Prisma.StringWithAggregatesFilter<"ShiftAssignment"> | string
   status?: Prisma.StringWithAggregatesFilter<"ShiftAssignment"> | string
+  clockedInAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ShiftAssignment"> | Date | string | null
+  clockedOutAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ShiftAssignment"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ShiftAssignment"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ShiftAssignment"> | Date | string
 }
@@ -250,6 +274,8 @@ export type ShiftAssignmentScalarWhereWithAggregatesInput = {
 export type ShiftAssignmentCreateInput = {
   id?: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   shift: Prisma.ShiftCreateNestedOneWithoutAssignmentsInput
@@ -262,6 +288,8 @@ export type ShiftAssignmentUncheckedCreateInput = {
   shiftId: string
   userId: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   swapRequestsAsInitiator?: Prisma.SwapRequestUncheckedCreateNestedManyWithoutInitiatorShiftInput
@@ -270,6 +298,8 @@ export type ShiftAssignmentUncheckedCreateInput = {
 export type ShiftAssignmentUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   shift?: Prisma.ShiftUpdateOneRequiredWithoutAssignmentsNestedInput
@@ -282,6 +312,8 @@ export type ShiftAssignmentUncheckedUpdateInput = {
   shiftId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   swapRequestsAsInitiator?: Prisma.SwapRequestUncheckedUpdateManyWithoutInitiatorShiftNestedInput
@@ -292,6 +324,8 @@ export type ShiftAssignmentCreateManyInput = {
   shiftId: string
   userId: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -299,6 +333,8 @@ export type ShiftAssignmentCreateManyInput = {
 export type ShiftAssignmentUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -308,6 +344,8 @@ export type ShiftAssignmentUncheckedUpdateManyInput = {
   shiftId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -332,6 +370,8 @@ export type ShiftAssignmentCountOrderByAggregateInput = {
   shiftId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  clockedInAt?: Prisma.SortOrder
+  clockedOutAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -341,6 +381,8 @@ export type ShiftAssignmentMaxOrderByAggregateInput = {
   shiftId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  clockedInAt?: Prisma.SortOrder
+  clockedOutAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -350,6 +392,8 @@ export type ShiftAssignmentMinOrderByAggregateInput = {
   shiftId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  clockedInAt?: Prisma.SortOrder
+  clockedOutAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -460,6 +504,8 @@ export type ShiftAssignmentUpdateOneRequiredWithoutSwapRequestsAsInitiatorNested
 export type ShiftAssignmentCreateWithoutUserInput = {
   id?: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   shift: Prisma.ShiftCreateNestedOneWithoutAssignmentsInput
@@ -470,6 +516,8 @@ export type ShiftAssignmentUncheckedCreateWithoutUserInput = {
   id?: string
   shiftId: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   swapRequestsAsInitiator?: Prisma.SwapRequestUncheckedCreateNestedManyWithoutInitiatorShiftInput
@@ -509,6 +557,8 @@ export type ShiftAssignmentScalarWhereInput = {
   shiftId?: Prisma.StringFilter<"ShiftAssignment"> | string
   userId?: Prisma.StringFilter<"ShiftAssignment"> | string
   status?: Prisma.StringFilter<"ShiftAssignment"> | string
+  clockedInAt?: Prisma.DateTimeNullableFilter<"ShiftAssignment"> | Date | string | null
+  clockedOutAt?: Prisma.DateTimeNullableFilter<"ShiftAssignment"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ShiftAssignment"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ShiftAssignment"> | Date | string
 }
@@ -516,6 +566,8 @@ export type ShiftAssignmentScalarWhereInput = {
 export type ShiftAssignmentCreateWithoutShiftInput = {
   id?: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutShiftAssignmentsInput
@@ -526,6 +578,8 @@ export type ShiftAssignmentUncheckedCreateWithoutShiftInput = {
   id?: string
   userId: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   swapRequestsAsInitiator?: Prisma.SwapRequestUncheckedCreateNestedManyWithoutInitiatorShiftInput
@@ -560,6 +614,8 @@ export type ShiftAssignmentUpdateManyWithWhereWithoutShiftInput = {
 export type ShiftAssignmentCreateWithoutSwapRequestsAsInitiatorInput = {
   id?: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   shift: Prisma.ShiftCreateNestedOneWithoutAssignmentsInput
@@ -571,6 +627,8 @@ export type ShiftAssignmentUncheckedCreateWithoutSwapRequestsAsInitiatorInput = 
   shiftId: string
   userId: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -594,6 +652,8 @@ export type ShiftAssignmentUpdateToOneWithWhereWithoutSwapRequestsAsInitiatorInp
 export type ShiftAssignmentUpdateWithoutSwapRequestsAsInitiatorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   shift?: Prisma.ShiftUpdateOneRequiredWithoutAssignmentsNestedInput
@@ -605,6 +665,8 @@ export type ShiftAssignmentUncheckedUpdateWithoutSwapRequestsAsInitiatorInput = 
   shiftId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -613,6 +675,8 @@ export type ShiftAssignmentCreateManyUserInput = {
   id?: string
   shiftId: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -620,6 +684,8 @@ export type ShiftAssignmentCreateManyUserInput = {
 export type ShiftAssignmentUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   shift?: Prisma.ShiftUpdateOneRequiredWithoutAssignmentsNestedInput
@@ -630,6 +696,8 @@ export type ShiftAssignmentUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   shiftId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   swapRequestsAsInitiator?: Prisma.SwapRequestUncheckedUpdateManyWithoutInitiatorShiftNestedInput
@@ -639,6 +707,8 @@ export type ShiftAssignmentUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   shiftId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -647,6 +717,8 @@ export type ShiftAssignmentCreateManyShiftInput = {
   id?: string
   userId: string
   status?: string
+  clockedInAt?: Date | string | null
+  clockedOutAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -654,6 +726,8 @@ export type ShiftAssignmentCreateManyShiftInput = {
 export type ShiftAssignmentUpdateWithoutShiftInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutShiftAssignmentsNestedInput
@@ -664,6 +738,8 @@ export type ShiftAssignmentUncheckedUpdateWithoutShiftInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   swapRequestsAsInitiator?: Prisma.SwapRequestUncheckedUpdateManyWithoutInitiatorShiftNestedInput
@@ -673,6 +749,8 @@ export type ShiftAssignmentUncheckedUpdateManyWithoutShiftInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  clockedInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  clockedOutAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -713,6 +791,8 @@ export type ShiftAssignmentSelect<ExtArgs extends runtime.Types.Extensions.Inter
   shiftId?: boolean
   userId?: boolean
   status?: boolean
+  clockedInAt?: boolean
+  clockedOutAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   shift?: boolean | Prisma.ShiftDefaultArgs<ExtArgs>
@@ -726,6 +806,8 @@ export type ShiftAssignmentSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   shiftId?: boolean
   userId?: boolean
   status?: boolean
+  clockedInAt?: boolean
+  clockedOutAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   shift?: boolean | Prisma.ShiftDefaultArgs<ExtArgs>
@@ -737,6 +819,8 @@ export type ShiftAssignmentSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   shiftId?: boolean
   userId?: boolean
   status?: boolean
+  clockedInAt?: boolean
+  clockedOutAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   shift?: boolean | Prisma.ShiftDefaultArgs<ExtArgs>
@@ -748,11 +832,13 @@ export type ShiftAssignmentSelectScalar = {
   shiftId?: boolean
   userId?: boolean
   status?: boolean
+  clockedInAt?: boolean
+  clockedOutAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ShiftAssignmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "shiftId" | "userId" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["shiftAssignment"]>
+export type ShiftAssignmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "shiftId" | "userId" | "status" | "clockedInAt" | "clockedOutAt" | "createdAt" | "updatedAt", ExtArgs["result"]["shiftAssignment"]>
 export type ShiftAssignmentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   shift?: boolean | Prisma.ShiftDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -780,6 +866,8 @@ export type $ShiftAssignmentPayload<ExtArgs extends runtime.Types.Extensions.Int
     shiftId: string
     userId: string
     status: string
+    clockedInAt: Date | null
+    clockedOutAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["shiftAssignment"]>
@@ -1212,6 +1300,8 @@ export interface ShiftAssignmentFieldRefs {
   readonly shiftId: Prisma.FieldRef<"ShiftAssignment", 'String'>
   readonly userId: Prisma.FieldRef<"ShiftAssignment", 'String'>
   readonly status: Prisma.FieldRef<"ShiftAssignment", 'String'>
+  readonly clockedInAt: Prisma.FieldRef<"ShiftAssignment", 'DateTime'>
+  readonly clockedOutAt: Prisma.FieldRef<"ShiftAssignment", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ShiftAssignment", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ShiftAssignment", 'DateTime'>
 }

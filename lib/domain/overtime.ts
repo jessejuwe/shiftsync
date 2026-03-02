@@ -105,6 +105,25 @@ export function calculateWeeklyHours(
 }
 
 /**
+ * Calculate total hours for assignments within a date range (inclusive).
+ */
+export function calculatePeriodHours(
+  assignments: AssignmentLike[],
+  periodStart: Date,
+  periodEnd: Date,
+  excludeAssignmentId?: string
+): number {
+  return assignments
+    .filter(
+      (a) =>
+        a.id !== excludeAssignmentId &&
+        a.startsAt >= periodStart &&
+        a.startsAt <= periodEnd
+    )
+    .reduce((sum, a) => sum + hoursInRange(a), 0);
+}
+
+/**
  * Calculate projected weekly hours if a proposed shift were added.
  * Returns { currentHours, shiftHours, projectedHours, overtimeHours }.
  */

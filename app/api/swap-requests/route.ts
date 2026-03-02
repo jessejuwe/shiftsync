@@ -4,6 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { broadcastSwapRequested } from "@/lib/pusher-events";
+import { REQUIRES_MANAGER_APPROVAL } from "@/lib/swap-config";
 import {
   SwapState,
   SwapEvent,
@@ -12,6 +13,89 @@ import {
   canCreateSwap,
   getDefaultExpiration,
 } from "@/lib/domain/swap-workflow";
+
+/**
+ * GET /api/swap-requests?role=receiver|initiator|all|pending_approval&status=PENDING_MANAGER
+ * List swap requests. pending_approval: managers see swaps awaiting their approval.
+ */
+export async function GET(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const role = searchParams.get("role") ?? "all";
+  const roleType = (session.user as { role?: string }).role;
+  const canManage = roleType === "ADMIN" || roleType === "MANAGER";
+
+  const where: Prisma.SwapRequestWhereInput =
+    role === "pending_approval" && canManage
+      ? { status: "PENDING_MANAGER" }
+      : role === "receiver"
+        ? { receiverId: session.user.id }
+        : role === "initiator"
+          ? { initiatorId: session.user.id }
+          : {
+              OR: [
+                { receiverId: session.user.id },
+                { initiatorId: session.user.id },
+              ],
+            };
+
+  const swapRequests = await prisma.swapRequest.findMany({
+    where,
+    include: {
+      initiator: { select: { id: true, name: true, email: true } },
+      receiver: { select: { id: true, name: true, email: true } },
+      initiatorShift: {
+        include: {
+          shift: {
+            include: {
+              location: { select: { id: true, name: true, timezone: true } },
+            },
+          },
+          user: { select: { id: true, name: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  const items = swapRequests.map((sr) => {
+    const initShift = sr.initiatorShift;
+    return {
+      id: sr.id,
+      status: sr.status,
+      message: sr.message,
+      createdAt: sr.createdAt.toISOString(),
+      respondedAt: sr.respondedAt?.toISOString() ?? null,
+      initiatorId: sr.initiatorId,
+      initiator: sr.initiator,
+      receiverId: sr.receiverId,
+      receiver: sr.receiver,
+      initiatorShiftId: sr.initiatorShiftId,
+      receiverShiftId: sr.receiverShiftId,
+      initiatorShift: {
+        id: initShift.id,
+        shiftId: initShift.shiftId,
+        shift: {
+          id: initShift.shift.id,
+          startsAt: initShift.shift.startsAt.toISOString(),
+          endsAt: initShift.shift.endsAt.toISOString(),
+          location: initShift.shift.location,
+        },
+        user: initShift.user,
+      },
+    };
+  });
+
+  return NextResponse.json({ swapRequests: items });
+}
 
 /**
  * POST /api/swap-requests
@@ -96,7 +180,10 @@ export async function POST(request: NextRequest) {
       }
 
       const initiatorPendingCount = await tx.swapRequest.count({
-        where: { initiatorId, status: "PENDING" },
+        where: {
+          initiatorId,
+          status: { in: ["PENDING", "PENDING_MANAGER"] },
+        },
       });
       if (!canCreateSwap(initiatorPendingCount).valid) {
         return {
@@ -109,7 +196,10 @@ export async function POST(request: NextRequest) {
       }
 
       const receiverPendingCount = await tx.swapRequest.count({
-        where: { receiverId, status: "PENDING" },
+        where: {
+          receiverId,
+          status: { in: ["PENDING", "PENDING_MANAGER"] },
+        },
       });
       if (!canCreateSwap(receiverPendingCount).valid) {
         return {
@@ -128,7 +218,7 @@ export async function POST(request: NextRequest) {
         initiatorId,
         receiverId,
         actorId: initiatorId,
-        requiresManagerApproval: false,
+        requiresManagerApproval: REQUIRES_MANAGER_APPROVAL,
         expiresAt,
         now: createdAt,
       });

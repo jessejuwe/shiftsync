@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { formatInTimeZone } from "date-fns-tz";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,10 +41,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getQueryClient } from "@/app/get-query-client";
+import { StaffAvailabilityOverview } from "./staff-availability-overview";
 
 const DAY_NAMES = [
   "Sunday",
@@ -91,6 +95,24 @@ function formatTimeLocal(utcIso: string, timezone: string): string {
 }
 
 export function AvailabilityManager() {
+  const { data: session, status } = useSession();
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  const isAdminOrManager = role === "ADMIN" || role === "MANAGER";
+
+  if (status === "loading") {
+    return (
+      <p className="text-muted-foreground text-sm">Loading…</p>
+    );
+  }
+
+  if (isAdminOrManager) {
+    return <StaffAvailabilityOverview />;
+  }
+
+  return <MyAvailabilityForm />;
+}
+
+function MyAvailabilityForm() {
   const queryClient = getQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -102,6 +124,55 @@ export function AvailabilityManager() {
       const res = await fetch("/api/availability");
       if (!res.ok) throw new Error("Failed to fetch availability");
       return res.json();
+    },
+  });
+
+  const [desiredHoursValue, setDesiredHoursValue] = useState<string>("");
+
+  const { data: desiredHoursData } = useQuery({
+    queryKey: ["desired-hours"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/desired-hours");
+      if (!res.ok) return { desiredHoursPerWeek: null };
+      return res.json();
+    },
+  });
+
+  useEffect(() => {
+    if (desiredHoursData?.desiredHoursPerWeek != null) {
+      setDesiredHoursValue(String(desiredHoursData.desiredHoursPerWeek));
+    } else {
+      setDesiredHoursValue("");
+    }
+  }, [desiredHoursData?.desiredHoursPerWeek]);
+
+  const desiredHoursMutation = useMutation({
+    mutationFn: async (hours: number | null) => {
+      const res = await fetch("/api/settings/desired-hours", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ desiredHoursPerWeek: hours }),
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        let message = "Failed to update";
+        try {
+          if (text) message = JSON.parse(text).message ?? message;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(message);
+      }
+      return text ? JSON.parse(text) : {};
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["desired-hours"] });
+      queryClient.invalidateQueries({ queryKey: ["fairness-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["availability-all"] });
+      toast.success("Desired hours updated");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
     },
   });
 
@@ -147,6 +218,10 @@ export function AvailabilityManager() {
       queryClient.invalidateQueries({ queryKey: ["availability"] });
       setFormOpen(false);
       form.reset();
+      toast.success("Availability added");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to add availability");
     },
   });
 
@@ -179,6 +254,10 @@ export function AvailabilityManager() {
       setFormOpen(false);
       setEditingId(null);
       form.reset();
+      toast.success("Availability updated");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to update availability");
     },
   });
 
@@ -193,6 +272,10 @@ export function AvailabilityManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["availability"] });
       setDeleteId(null);
+      toast.success("Availability removed");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to remove availability");
     },
   });
 
@@ -254,6 +337,57 @@ export function AvailabilityManager() {
           Add availability
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Target className="size-4" />
+            Desired hours per week
+          </CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Used for fairness analytics. Leave blank to use the default (40h).
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const num = desiredHoursValue.trim() === "" ? null : parseFloat(desiredHoursValue);
+              if (num !== null && (isNaN(num) || num < 0 || num > 80)) {
+                toast.error("Enter a number between 0 and 80");
+                return;
+              }
+              desiredHoursMutation.mutate(num);
+            }}
+            className="flex flex-wrap items-end gap-2"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="desired-hours" className="sr-only">
+                Hours per week
+              </Label>
+              <Input
+                id="desired-hours"
+                type="number"
+                min={0}
+                max={80}
+                step={0.5}
+                placeholder="40"
+                value={desiredHoursValue}
+                onChange={(e) => setDesiredHoursValue(e.target.value)}
+                disabled={desiredHoursMutation.isPending}
+                className="max-w-[120px]"
+              />
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={desiredHoursMutation.isPending}
+            >
+              Save
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {locations.length === 0 && (
         <Card>

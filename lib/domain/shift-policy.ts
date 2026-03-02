@@ -16,6 +16,7 @@ export type ValidationCode =
   | "CERTIFICATION_REQUIRED"
   | "AVAILABILITY_VIOLATION"
   | "DAILY_HOURS_EXCEEDED"
+  | "DAILY_HOURS_WARNING"
   | "WEEKLY_HOURS_EXCEEDED"
   | "CONSECUTIVE_DAYS_EXCEEDED";
 
@@ -70,7 +71,8 @@ export interface PolicyAvailabilityWindow extends TimeRange {
 
 export interface ShiftPolicyConfig {
   minRestHours: number;
-  maxDailyHours: number;
+  maxDailyHoursWarning: number; // 8h = warning
+  maxDailyHours: number; // 12h = hard block
   overtimeWarningHoursPerWeek: number;
   overtimeBlockHoursPerWeek: number;
   maxConsecutiveDays: number;
@@ -78,6 +80,7 @@ export interface ShiftPolicyConfig {
 
 const DEFAULT_CONFIG: ShiftPolicyConfig = {
   minRestHours: 10,
+  maxDailyHoursWarning: 8,
   maxDailyHours: 12,
   overtimeWarningHoursPerWeek: 40,
   overtimeBlockHoursPerWeek: 48,
@@ -335,7 +338,7 @@ function hoursOnDate(range: TimeRange, dateKey: string): number {
 
 /**
  * Check if assigning would exceed max hours in a single day.
- * Splits overnight shifts across calendar days.
+ * Warning at 8h, hard block at 12h. Splits overnight shifts across calendar days.
  */
 export function checkDailyHoursLimit(
   shift: PolicyShift,
@@ -344,7 +347,10 @@ export function checkDailyHoursLimit(
   excludeAssignmentId?: string,
   alternativeUsers?: PolicyUser[]
 ): ValidationResult | null {
-  const { maxDailyHours } = { ...DEFAULT_CONFIG, ...config };
+  const { maxDailyHoursWarning, maxDailyHours } = {
+    ...DEFAULT_CONFIG,
+    ...config,
+  };
 
   const startKey = toDateKey(shift.startsAt);
   const endKey = toDateKey(shift.endsAt);
@@ -372,7 +378,15 @@ export function checkDailyHoursLimit(
       return {
         type: "block",
         code: "DAILY_HOURS_EXCEEDED",
-        message: `Assignment would exceed ${maxDailyHours}h/day (${totalDailyHours.toFixed(1)}h on ${dateKey}).`,
+        message: `Assignment would exceed ${maxDailyHours}h/day limit (${totalDailyHours.toFixed(1)}h on ${dateKey}).`,
+        suggestions: alternativeUsers,
+      };
+    }
+    if (totalDailyHours > maxDailyHoursWarning) {
+      return {
+        type: "warning",
+        code: "DAILY_HOURS_WARNING",
+        message: `Assignment would exceed ${maxDailyHoursWarning}h/day warning (${totalDailyHours.toFixed(1)}h on ${dateKey}).`,
         suggestions: alternativeUsers,
       };
     }
@@ -575,7 +589,10 @@ export function validateShiftAssignment(
     excludeAssignmentId,
     alternativeUsers
   );
-  if (dailyHours) blocks.push(dailyHours);
+  if (dailyHours) {
+    if (dailyHours.type === "block") blocks.push(dailyHours);
+    else warnings.push(dailyHours);
+  }
 
   const weeklyHours = checkWeeklyHoursProjection(
     shift,

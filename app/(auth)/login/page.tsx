@@ -6,6 +6,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Login",
+  description: "Sign in to your ShiftSync account",
+};
 
 export default async function LoginPage({
   searchParams,

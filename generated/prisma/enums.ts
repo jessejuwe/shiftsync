@@ -20,6 +20,7 @@ export type Role = (typeof Role)[keyof typeof Role]
 
 export const SwapRequestStatus = {
   PENDING: 'PENDING',
+  PENDING_MANAGER: 'PENDING_MANAGER',
   APPROVED: 'APPROVED',
   REJECTED: 'REJECTED',
   CANCELLED: 'CANCELLED'
@@ -35,8 +36,17 @@ export const NotificationType = {
   SWAP_APPROVED: 'SWAP_APPROVED',
   SWAP_REJECTED: 'SWAP_REJECTED',
   SWAP_CANCELLED: 'SWAP_CANCELLED',
+  SWAP_PENDING_APPROVAL: 'SWAP_PENDING_APPROVAL',
   AVAILABILITY_REMINDER: 'AVAILABILITY_REMINDER',
   SYSTEM: 'SYSTEM'
 } as const
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType]
+
+
+export const NotificationPreference = {
+  IN_APP_ONLY: 'IN_APP_ONLY',
+  IN_APP_AND_EMAIL: 'IN_APP_AND_EMAIL'
+} as const
+
+export type NotificationPreference = (typeof NotificationPreference)[keyof typeof NotificationPreference]

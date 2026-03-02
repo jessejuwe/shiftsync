@@ -324,6 +324,20 @@ const TRANSITIONS: Record<
           body: "A swap has been agreed and requires your approval.",
           data: { initiatorId: ctx.initiatorId, receiverId: ctx.receiverId },
         },
+        {
+          target: "initiator",
+          type: "SWAP_PENDING_APPROVAL",
+          title: "Swap accepted",
+          body: "Your swap has been accepted and is waiting for manager approval.",
+          data: { receiverId: ctx.receiverId },
+        },
+        {
+          target: "receiver",
+          type: "SWAP_PENDING_APPROVAL",
+          title: "Swap pending approval",
+          body: "Your swap is waiting for manager approval.",
+          data: { initiatorId: ctx.initiatorId },
+        },
       ],
     },
     [SwapEvent.CONFIRM]: {
@@ -518,16 +532,19 @@ export function getValidEvents(
 /**
  * Map workflow state to Prisma SwapRequestStatus.
  */
-export function toPrismaStatus(state: SwapStateType): "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" {
+export function toPrismaStatus(
+  state: SwapStateType
+): "PENDING" | "PENDING_MANAGER" | "APPROVED" | "REJECTED" | "CANCELLED" {
   switch (state) {
     case SwapState.APPROVED:
       return "APPROVED";
+    case SwapState.PENDING_MANAGER:
+      return "PENDING_MANAGER";
     case SwapState.CANCELLED:
     case SwapState.EXPIRED:
       return "CANCELLED";
     case SwapState.REQUESTED:
     case SwapState.ACCEPTED:
-    case SwapState.PENDING_MANAGER:
     case SwapState.ACTIVE:
     default:
       return "PENDING";
@@ -536,15 +553,16 @@ export function toPrismaStatus(state: SwapStateType): "PENDING" | "APPROVED" | "
 
 /**
  * Map Prisma status to workflow state (for loading existing requests).
- * PENDING is lossy - defaults to REQUESTED.
  */
 export function fromPrismaStatus(
-  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED",
+  status: "PENDING" | "PENDING_MANAGER" | "APPROVED" | "REJECTED" | "CANCELLED",
   _requiresManagerApproval?: boolean
 ): SwapStateType {
   switch (status) {
     case "APPROVED":
       return SwapState.APPROVED;
+    case "PENDING_MANAGER":
+      return SwapState.PENDING_MANAGER;
     case "REJECTED":
     case "CANCELLED":
       return SwapState.CANCELLED;

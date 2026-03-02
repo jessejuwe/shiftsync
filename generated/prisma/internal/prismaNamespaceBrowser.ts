@@ -94,6 +94,8 @@ export const UserScalarFieldEnum = {
   avatarUrl: 'avatarUrl',
   image: 'image',
   isActive: 'isActive',
+  notificationPreference: 'notificationPreference',
+  desiredHoursPerWeek: 'desiredHoursPerWeek',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   lastLoginAt: 'lastLoginAt'
@@ -144,6 +146,7 @@ export const LocationScalarFieldEnum = {
   name: 'name',
   address: 'address',
   timezone: 'timezone',
+  hourlyRate: 'hourlyRate',
   isActive: 'isActive',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -219,6 +222,8 @@ export const ShiftAssignmentScalarFieldEnum = {
   shiftId: 'shiftId',
   userId: 'userId',
   status: 'status',
+  clockedInAt: 'clockedInAt',
+  clockedOutAt: 'clockedOutAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

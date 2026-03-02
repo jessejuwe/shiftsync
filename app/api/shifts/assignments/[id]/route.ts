@@ -57,7 +57,7 @@ export async function DELETE(
       // Auto-cancel pending swap requests that reference this assignment
       const affectedSwaps = await tx.swapRequest.findMany({
         where: {
-          status: "PENDING",
+          status: { in: ["PENDING", "PENDING_MANAGER"] },
           OR: [
             { initiatorShiftId: assignmentId },
             { receiverShiftId: assignmentId },

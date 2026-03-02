@@ -46,13 +46,14 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const locationId = searchParams.get("locationId");
   const weekStartParam = searchParams.get("weekStart");
+  const weekCount = Math.min(4, Math.max(1, parseInt(searchParams.get("weekCount") ?? "1", 10) || 1));
 
   const now = new Date();
   const weekStart = weekStartParam
     ? getWeekStart(new Date(weekStartParam))
     : getWeekStart(now);
   const weekEnd = new Date(weekStart);
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + weekCount * 7 - 1);
   weekEnd.setUTCHours(23, 59, 59, 999);
 
   const staff = await prisma.user.findMany({
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
       isActive: true,
       role: { in: ["STAFF", "MANAGER"] },
     },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, email: true, desiredHoursPerWeek: true },
     orderBy: { name: "asc" },
   });
 
@@ -103,17 +104,24 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const targetHours = DEFAULT_FAIRNESS_CONFIG.targetHoursPerPeriod ?? 40;
+  const defaultTarget = DEFAULT_FAIRNESS_CONFIG.targetHoursPerPeriod ?? 40;
+  const targetHoursMap = new Map<string, number>();
+  for (const s of staff) {
+    const weekly = s.desiredHoursPerWeek ?? defaultTarget;
+    targetHoursMap.set(s.id, weekly * weekCount);
+  }
+
   const hoursMap = totalHoursPerStaff(flatAssignments);
   const premiumMap = premiumShiftsPerStaff(flatAssignments);
-  const deltaMap = desiredHoursDelta(hoursMap, targetHours);
-  const equityMap = equityScore(hoursMap, premiumMap, targetHours);
+  const deltaMap = desiredHoursDelta(hoursMap, targetHoursMap);
+  const equityMap = equityScore(hoursMap, premiumMap, targetHoursMap);
 
   const staffFairness = allAssignments.map(({ userId, staff: s }) => {
     const hours = Math.round((hoursMap.get(userId) ?? 0) * 10) / 10;
     const premium = premiumMap.get(userId) ?? 0;
     const delta = Math.round((deltaMap.get(userId) ?? 0) * 10) / 10;
     const equity = equityMap.get(userId) ?? 50;
+    const targetHours = targetHoursMap.get(userId) ?? defaultTarget * weekCount;
 
     return {
       userId: s.id,
@@ -125,6 +133,8 @@ export async function GET(request: NextRequest) {
       equityScore: equity,
       isOverScheduled: delta > 2,
       isUnderScheduled: delta < -2,
+      desiredHoursPerWeek: s.desiredHoursPerWeek ?? defaultTarget,
+      targetHours,
     };
   });
 
@@ -132,7 +142,8 @@ export async function GET(request: NextRequest) {
     weekStart: weekStart.toISOString(),
     weekEnd: weekEnd.toISOString(),
     locationId: locationId ?? null,
-    targetHours,
+    weekCount,
+    targetHours: defaultTarget,
     staff: staffFairness.sort((a, b) => b.totalHours - a.totalHours),
   });
 }

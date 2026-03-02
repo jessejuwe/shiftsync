@@ -15,6 +15,7 @@ import {
   type PolicyCertification,
   type PolicyAvailabilityWindow,
 } from "@/lib/domain/shift-policy";
+import { canUnpublishOrEdit } from "@/config/schedule";
 
 function toPolicyAssignment(a: {
   id: string;
@@ -124,15 +125,25 @@ export async function PATCH(
         return { success: false as const, error: "NOT_FOUND" };
       }
 
-      const effectiveStartsAt = newStartsAt ?? shift.startsAt;
-      const effectiveEndsAt = newEndsAt ?? shift.endsAt;
-      const effectiveSkillIds =
-        requiredSkillIds ?? shift.requiredSkills.map((s) => s.skillId);
-
       const timesOrSkillsChanged =
         newStartsAt != null ||
         newEndsAt != null ||
         requiredSkillIds !== undefined;
+      const unpublishing = body.isPublished === false;
+
+      if ((timesOrSkillsChanged || unpublishing) && !canUnpublishOrEdit(shift.startsAt)) {
+        return {
+          success: false as const,
+          error: "CUTOFF_PASSED",
+          message:
+            "Cannot edit or unpublish: shift is within the cutoff window (default 48 hours before start).",
+        };
+      }
+
+      const effectiveStartsAt = newStartsAt ?? shift.startsAt;
+      const effectiveEndsAt = newEndsAt ?? shift.endsAt;
+      const effectiveSkillIds =
+        requiredSkillIds ?? shift.requiredSkills.map((s) => s.skillId);
 
       if (timesOrSkillsChanged && shift.assignments.length > 0) {
         const policyShift: PolicyShift = {
@@ -317,7 +328,7 @@ export async function PATCH(
       if (assignmentIds.length > 0) {
         const affectedSwaps = await tx.swapRequest.findMany({
           where: {
-            status: "PENDING",
+            status: { in: ["PENDING", "PENDING_MANAGER"] },
             OR: [
               { initiatorShiftId: { in: assignmentIds } },
               { receiverShiftId: { in: assignmentIds } },
@@ -389,6 +400,17 @@ export async function PATCH(
         return NextResponse.json(
           { code: "NOT_FOUND", message: "Shift not found" },
           { status: 404 }
+        );
+      }
+      if (result.error === "CUTOFF_PASSED") {
+        return NextResponse.json(
+          {
+            code: "CUTOFF_PASSED",
+            message:
+              result.message ??
+              "Cannot edit or unpublish: shift is within the cutoff window (default 48 hours before start).",
+          },
+          { status: 400 }
         );
       }
       return NextResponse.json(

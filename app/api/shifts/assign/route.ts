@@ -12,10 +12,12 @@ import {
   type PolicyCertification,
   type PolicyAvailabilityWindow,
 } from "@/lib/domain/shift-policy";
+import { STAFF_PICKUP_MESSAGES } from "@/lib/validation-messages";
 
 const ASSIGNMENT_CONFLICT = "ASSIGNMENT_CONFLICT";
 const VALIDATION_FAILED = "VALIDATION_FAILED";
 const NOT_FOUND = "NOT_FOUND";
+const NOT_PUBLISHED = "NOT_PUBLISHED";
 
 interface AssignShiftBody {
   shiftId: string;
@@ -116,6 +118,18 @@ export async function POST(request: NextRequest) {
           error: {
             code: NOT_FOUND,
             message: "Shift not found",
+            details: { shiftId },
+          },
+        };
+      }
+
+      // Staff can only pick up published shifts
+      if (userId === session.user.id && !shift.isPublished) {
+        return {
+          success: false as const,
+          error: {
+            code: "NOT_PUBLISHED",
+            message: "This shift is not yet published. Only published shifts can be picked up.",
             details: { shiftId },
           },
         };
@@ -291,14 +305,24 @@ export async function POST(request: NextRequest) {
             : conflictBlock?.code === "REST_VIOLATION"
               ? "rest-period"
               : conflictBlock?.code === "WEEKLY_HOURS_EXCEEDED" ||
-                  conflictBlock?.code === "DAILY_HOURS_EXCEEDED"
+                  conflictBlock?.code === "DAILY_HOURS_EXCEEDED" ||
+                  conflictBlock?.code === "DAILY_HOURS_WARNING"
                 ? "overtime"
                 : "double-booking";
+        const isStaffPickup = userId === session.user.id;
+        const staffMessage =
+          isStaffPickup &&
+          conflictBlock?.code &&
+          conflictBlock.code in STAFF_PICKUP_MESSAGES
+            ? STAFF_PICKUP_MESSAGES[conflictBlock.code]
+            : null;
+        const userMessage =
+          staffMessage ?? conflictBlock?.message ?? "Shift assignment validation failed";
         return {
           success: false as const,
           error: {
             code: VALIDATION_FAILED,
-            message: "Shift assignment validation failed",
+            message: userMessage,
             details: {
               blocks: validation.blocks,
               warnings: validation.warnings,
@@ -376,7 +400,9 @@ export async function POST(request: NextRequest) {
           ? 404
           : code === ASSIGNMENT_CONFLICT
             ? 409
-            : 422;
+            : code === NOT_PUBLISHED
+              ? 400
+              : 422;
       if (conflictPayload) {
         void broadcastAssignmentConflict(conflictPayload.userId, {
           shiftId: conflictPayload.shiftId,

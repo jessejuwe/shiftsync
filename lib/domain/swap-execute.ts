@@ -40,12 +40,19 @@ export interface SwapExecuteInput {
   receiverId: string;
   initiatorShiftId: string;
   receiverShiftId: string | null;
+  /** When provided, allows override of 7th consecutive day block for receiver or initiator */
+  overrideReason?: string;
 }
 
 export interface SwapExecuteResult {
   success: boolean;
   error?: string;
-  validationBlocks?: Array< { type: string; message: string }>;
+  validationBlocks?: Array<{
+    type: string;
+    message: string;
+    code?: string;
+    metadata?: { requiresOverride?: boolean };
+  }>;
 }
 
 type TxClient = Omit<
@@ -64,7 +71,7 @@ type TxClient = Omit<
 export async function executeSwap(
   tx: TxClient,
   input: SwapExecuteInput,
-  actorId: string
+  actorId: string,
 ): Promise<SwapExecuteResult> {
   const {
     swapRequestId,
@@ -72,6 +79,7 @@ export async function executeSwap(
     receiverId,
     initiatorShiftId,
     receiverShiftId,
+    overrideReason,
   } = input;
 
   const initiatorAssignment = await tx.shiftAssignment.findUnique({
@@ -129,7 +137,9 @@ export async function executeSwap(
       locationId: receiverAssignment.shift.locationId,
       startsAt: receiverAssignment.shift.startsAt,
       endsAt: receiverAssignment.shift.endsAt,
-      requiredSkillIds: receiverAssignment.shift.requiredSkills.map((s) => s.skillId),
+      requiredSkillIds: receiverAssignment.shift.requiredSkills.map(
+        (s) => s.skillId,
+      ),
     };
   }
 
@@ -236,9 +246,10 @@ export async function executeSwap(
 
   // Validate receiver can take initiatorShift (exclude receiverShift from their assignments)
   const receiverAssignmentsFiltered = receiverAssignments.filter(
-    (a) => !receiverShiftId || a.id !== receiverShiftId
+    (a) => !receiverShiftId || a.id !== receiverShiftId,
   );
-  const receiverPolicyAssignments = receiverAssignmentsFiltered.map(toPolicyAssignment);
+  const receiverPolicyAssignments =
+    receiverAssignmentsFiltered.map(toPolicyAssignment);
   const weekStartR = getWeekStart(initiatorShift.startsAt);
   const weekEndR = new Date(weekStartR);
   weekEndR.setUTCDate(weekEndR.getUTCDate() + 6);
@@ -248,7 +259,10 @@ export async function executeSwap(
     return s >= weekStartR && s <= weekEndR;
   });
 
-  const skillsByUserI = new Map<string, { user: { id: string; name: string; email: string }; skillIds: string[] }>();
+  const skillsByUserI = new Map<
+    string,
+    { user: { id: string; name: string; email: string }; skillIds: string[] }
+  >();
   for (const s of allStaffSkillsInitiatorShift) {
     const existing = skillsByUserI.get(s.userId);
     const skillIds = existing ? [...existing.skillIds, s.skillId] : [s.skillId];
@@ -261,15 +275,25 @@ export async function executeSwap(
     .filter(
       ([uid, { skillIds }]) =>
         uid !== receiverId &&
-        initiatorShiftPolicy.requiredSkillIds.every((rid) => skillIds.includes(rid))
+        initiatorShiftPolicy.requiredSkillIds.every((rid) =>
+          skillIds.includes(rid),
+        ),
     )
     .map(([, { user, skillIds }]) => ({ ...user, skillIds }));
   const certUsersI = Array.from(
     new Map(
       allCertsInitiatorLocation
         .filter((c) => c.userId !== receiverId)
-        .map((c) => [c.user.id, { id: c.user.id, name: c.user.name, email: c.user.email, hasValidCert: true }])
-    ).values()
+        .map((c) => [
+          c.user.id,
+          {
+            id: c.user.id,
+            name: c.user.name,
+            email: c.user.email,
+            hasValidCert: true,
+          },
+        ]),
+    ).values(),
   );
 
   const receiverValidation = validateShiftAssignment({
@@ -293,18 +317,34 @@ export async function executeSwap(
     userAssignmentsInWeek: receiverAssignmentsInWeek.map(toPolicyAssignment),
     allUsersWithSkills: usersWithAllSkillsI,
     allUsersWithLocationCerts: certUsersI,
-    allUsersWithAvailability: certUsersI.map((u) => ({ ...u, hasAvailability: true })),
+    allUsersWithAvailability: certUsersI.map((u) => ({
+      ...u,
+      hasAvailability: true,
+    })),
     excludeAssignmentId: receiverShiftId ?? undefined,
     now,
   });
 
-  if (!receiverValidation.valid) {
+  let used7thDayOverride = false;
+  const canOverrideReceiver7thDay =
+    !receiverValidation.valid &&
+    receiverValidation.blocks.length === 1 &&
+    receiverValidation.blocks[0].code === "CONSECUTIVE_DAYS_EXCEEDED" &&
+    receiverValidation.blocks[0].metadata?.requiresOverride === true &&
+    typeof overrideReason === "string" &&
+    overrideReason.trim().length > 0;
+
+  if (canOverrideReceiver7thDay) used7thDayOverride = true;
+
+  if (!receiverValidation.valid && !canOverrideReceiver7thDay) {
     return {
       success: false,
-      error: "Receiver cannot take initiator shift",
+      error: "Receiver cannot take initiator shift.",
       validationBlocks: receiverValidation.blocks.map((b) => ({
         type: b.type,
         message: b.message,
+        code: b.code,
+        metadata: b.metadata,
       })),
     };
   }
@@ -312,22 +352,30 @@ export async function executeSwap(
   // Validate initiator can take receiverShift (if exists)
   if (receiverShiftPolicy && receiverAssignment) {
     const initiatorAssignmentsFiltered = initiatorAssignments.filter(
-      (a) => a.id !== initiatorShiftId
+      (a) => a.id !== initiatorShiftId,
     );
-    const initiatorPolicyAssignments = initiatorAssignmentsFiltered.map(toPolicyAssignment);
+    const initiatorPolicyAssignments =
+      initiatorAssignmentsFiltered.map(toPolicyAssignment);
     const weekStartI = getWeekStart(receiverAssignment.shift.startsAt);
     const weekEndI = new Date(weekStartI);
     weekEndI.setUTCDate(weekEndI.getUTCDate() + 6);
     weekEndI.setUTCHours(23, 59, 59, 999);
-    const initiatorAssignmentsInWeek = initiatorAssignmentsFiltered.filter((a) => {
-      const s = a.shift.startsAt;
-      return s >= weekStartI && s <= weekEndI;
-    });
+    const initiatorAssignmentsInWeek = initiatorAssignmentsFiltered.filter(
+      (a) => {
+        const s = a.shift.startsAt;
+        return s >= weekStartI && s <= weekEndI;
+      },
+    );
 
-    const skillsByUserR = new Map<string, { user: { id: string; name: string; email: string }; skillIds: string[] }>();
+    const skillsByUserR = new Map<
+      string,
+      { user: { id: string; name: string; email: string }; skillIds: string[] }
+    >();
     for (const s of allStaffSkillsReceiverShift) {
       const existing = skillsByUserR.get(s.userId);
-      const skillIds = existing ? [...existing.skillIds, s.skillId] : [s.skillId];
+      const skillIds = existing
+        ? [...existing.skillIds, s.skillId]
+        : [s.skillId];
       skillsByUserR.set(s.userId, {
         user: s.user,
         skillIds: [...new Set(skillIds)],
@@ -337,15 +385,25 @@ export async function executeSwap(
       .filter(
         ([uid, { skillIds }]) =>
           uid !== initiatorId &&
-          receiverShiftPolicy!.requiredSkillIds.every((rid) => skillIds.includes(rid))
+          receiverShiftPolicy!.requiredSkillIds.every((rid) =>
+            skillIds.includes(rid),
+          ),
       )
       .map(([, { user, skillIds }]) => ({ ...user, skillIds }));
     const certUsersR = Array.from(
       new Map(
         allCertsReceiverLocation
           .filter((c) => c.userId !== initiatorId)
-          .map((c) => [c.user.id, { id: c.user.id, name: c.user.name, email: c.user.email, hasValidCert: true }])
-      ).values()
+          .map((c) => [
+            c.user.id,
+            {
+              id: c.user.id,
+              name: c.user.name,
+              email: c.user.email,
+              hasValidCert: true,
+            },
+          ]),
+      ).values(),
     );
 
     const initiatorValidation = validateShiftAssignment({
@@ -369,18 +427,33 @@ export async function executeSwap(
       userAssignmentsInWeek: initiatorAssignmentsInWeek.map(toPolicyAssignment),
       allUsersWithSkills: usersWithAllSkillsR,
       allUsersWithLocationCerts: certUsersR,
-      allUsersWithAvailability: certUsersR.map((u) => ({ ...u, hasAvailability: true })),
+      allUsersWithAvailability: certUsersR.map((u) => ({
+        ...u,
+        hasAvailability: true,
+      })),
       excludeAssignmentId: initiatorShiftId,
       now,
     });
 
-    if (!initiatorValidation.valid) {
+    const canOverrideInitiator7thDay =
+      !initiatorValidation.valid &&
+      initiatorValidation.blocks.length === 1 &&
+      initiatorValidation.blocks[0].code === "CONSECUTIVE_DAYS_EXCEEDED" &&
+      initiatorValidation.blocks[0].metadata?.requiresOverride === true &&
+      typeof overrideReason === "string" &&
+      overrideReason.trim().length > 0;
+
+    if (canOverrideInitiator7thDay) used7thDayOverride = true;
+
+    if (!initiatorValidation.valid && !canOverrideInitiator7thDay) {
       return {
         success: false,
-        error: "Initiator cannot take receiver shift",
+        error: "Initiator cannot take receiver shift.",
         validationBlocks: initiatorValidation.blocks.map((b) => ({
           type: b.type,
           message: b.message,
+          code: b.code,
+          metadata: b.metadata,
         })),
       };
     }
@@ -417,7 +490,10 @@ export async function executeSwap(
           ? "You have received a shift from a swap."
           : "Your shift was successfully dropped.",
         data: receiverAssignment
-          ? { shiftId: receiverAssignment.shift.id, assignmentId: receiverShiftId }
+          ? {
+              shiftId: receiverAssignment.shift.id,
+              assignmentId: receiverShiftId,
+            }
           : { shiftId: initiatorShift.id, dropped: true },
       },
     ],
@@ -437,6 +513,10 @@ export async function executeSwap(
           initiatorId,
           receiverId,
           type: receiverShiftId ? "swap" : "drop",
+          ...(used7thDayOverride && {
+            override7thDay: true,
+            overrideReason: overrideReason!.trim(),
+          }),
         },
       },
     ],

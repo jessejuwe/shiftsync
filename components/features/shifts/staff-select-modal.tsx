@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -127,6 +128,7 @@ export function StaffSelectModal({
       queryClient.invalidateQueries({ queryKey: ["shifts"] });
       setOverrideDialogOpen(false);
       setPendingOverrideUserId(null);
+      toast.success("Staff assigned successfully");
       onAssignSuccess();
       onOpenChange(false);
     },
@@ -150,6 +152,8 @@ export function StaffSelectModal({
         setPendingOverrideUserId(e.userId!);
         setOverrideReason("");
         setOverrideDialogOpen(true);
+      } else {
+        toast.error(err instanceof Error ? err.message : "Assignment failed");
       }
       onAssignError?.(err);
     },

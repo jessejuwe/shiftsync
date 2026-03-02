@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  calculateWeeklyHours,
+  calculatePeriodHours,
   calculateConsecutiveDaysCurrent,
   type AssignmentLike,
   DEFAULT_OVERTIME_CONFIG,
@@ -40,13 +40,14 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const locationId = searchParams.get("locationId");
   const weekStartParam = searchParams.get("weekStart");
+  const weekCount = Math.min(4, Math.max(1, parseInt(searchParams.get("weekCount") ?? "1", 10) || 1));
 
   const now = new Date();
   const weekStart = weekStartParam
     ? getWeekStart(new Date(weekStartParam))
     : getWeekStart(now);
   const weekEnd = new Date(weekStart);
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + weekCount * 7 - 1);
   weekEnd.setUTCHours(23, 59, 59, 999);
 
   const staff = await prisma.user.findMany({
@@ -71,22 +72,50 @@ export async function GET(request: NextRequest) {
             endsAt: { gte: consecutiveCutoff },
           },
         },
-        include: { shift: { select: { startsAt: true, endsAt: true } } },
+        include: {
+          shift: {
+            select: {
+              id: true,
+              startsAt: true,
+              endsAt: true,
+              title: true,
+            },
+          },
+        },
       });
       return { userId: s.id, assignments, staff: s };
     })
   );
 
-  const APPROACHING_HOURS = 35;
+  const location = locationId
+    ? await prisma.location.findUnique({
+        where: { id: locationId },
+        select: { hourlyRate: true },
+      })
+    : null;
+  const hourlyRate = location?.hourlyRate ?? 25; // Default $25/hr for cost projection
+  const OVERTIME_MULTIPLIER = 1.5;
+
   const { overtimeWarningHoursPerWeek } = DEFAULT_OVERTIME_CONFIG;
+  const periodOvertimeThreshold = overtimeWarningHoursPerWeek * weekCount;
+  const APPROACHING_HOURS = 35 * weekCount;
 
   const staffHours = allStaffAssignments.map(({ userId, assignments, staff: s }) => {
     const policyAssignments = assignments.map(toAssignmentLike);
-    const hoursThisWeek = calculateWeeklyHours(
+    const hoursThisWeek = calculatePeriodHours(
       policyAssignments,
-      weekStart
+      weekStart,
+      weekEnd
     );
     const consecutive = calculateConsecutiveDaysCurrent(policyAssignments);
+
+    const assignmentsInPeriod = assignments.filter(
+      (a) =>
+        a.shift.startsAt >= weekStart &&
+        a.shift.startsAt <= weekEnd
+    );
+    const overtimeHours = Math.max(0, hoursThisWeek - periodOvertimeThreshold);
+    const overtimeCost = Math.round(overtimeHours * hourlyRate * OVERTIME_MULTIPLIER * 100) / 100;
 
     return {
       userId: s.id,
@@ -94,19 +123,37 @@ export async function GET(request: NextRequest) {
       email: s.email,
       hoursThisWeek: Math.round(hoursThisWeek * 10) / 10,
       approachingOvertime: hoursThisWeek >= APPROACHING_HOURS,
-      overOvertime: hoursThisWeek >= overtimeWarningHoursPerWeek,
+      overOvertime: hoursThisWeek >= periodOvertimeThreshold,
       consecutiveDays: consecutive.maxConsecutive,
       is6thConsecutiveDay: consecutive.is6thDay,
       is7thOrMoreConsecutiveDay: consecutive.is7thOrMore,
+      overtimeHours: Math.round(overtimeHours * 10) / 10,
+      overtimeCost,
+      assignments: assignmentsInPeriod.map((a) => ({
+        id: a.id,
+        shiftId: a.shift.id,
+        startsAt: a.shift.startsAt.toISOString(),
+        endsAt: a.shift.endsAt.toISOString(),
+        title: a.shift.title,
+        hours: Math.round(
+          ((a.shift.endsAt.getTime() - a.shift.startsAt.getTime()) / (1000 * 60 * 60)) * 10
+        ) / 10,
+      })),
     };
   });
 
-  const filtered = staffHours;
+  const totalProjectedOvertimeCost = staffHours.reduce(
+    (sum, s) => sum + (s.overtimeCost ?? 0),
+    0
+  );
 
   return NextResponse.json({
     weekStart: weekStart.toISOString(),
     weekEnd: weekEnd.toISOString(),
     locationId: locationId ?? null,
-    staff: filtered.sort((a, b) => b.hoursThisWeek - a.hoursThisWeek),
+    weekCount,
+    hourlyRate,
+    totalProjectedOvertimeCost,
+    staff: staffHours.sort((a, b) => b.hoursThisWeek - a.hoursThisWeek),
   });
 }

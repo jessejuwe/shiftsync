@@ -82,7 +82,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         pathname.startsWith("/audit");
 
       if (isProtected) {
-        return !!auth?.user;
+        if (!auth?.user) return false;
+
+        // Staff must not see dashboard root — redirect at proxy level to avoid flash
+        const role = (auth.user as { role?: string }).role;
+        if (role === "STAFF" && pathname === "/") {
+          return Response.redirect(new URL("/shifts", request.nextUrl));
+        }
+
+        return true;
       }
 
       return true;
