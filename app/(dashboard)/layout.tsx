@@ -96,7 +96,7 @@ export default function DashboardLayout({
                   <SidebarMenuButton asChild isActive={pathname === "/staff"}>
                     <Link href="/staff">
                       <Users />
-                      <span>Staff Skills</span>
+                      <span>Staff</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

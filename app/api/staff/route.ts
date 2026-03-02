@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const locationId = searchParams.get("locationId");
+  const includeExpired = searchParams.get("includeExpired") === "1";
+
+  const certWhere: { locationId?: string; expiresAt?: { gt: Date } } = {};
+  if (locationId) certWhere.locationId = locationId;
+  if (!includeExpired) certWhere.expiresAt = { gt: new Date() };
 
   const users = await prisma.user.findMany({
     where: { isActive: true, role: { in: ["STAFF", "MANAGER"] } },
@@ -12,9 +17,7 @@ export async function GET(request: NextRequest) {
         include: { skill: { select: { id: true, name: true } } },
       },
       certifications: {
-        where: locationId
-          ? { locationId, expiresAt: { gt: new Date() } }
-          : { expiresAt: { gt: new Date() } },
+        where: Object.keys(certWhere).length > 0 ? certWhere : undefined,
         include: { location: { select: { id: true, name: true } } },
       },
     },

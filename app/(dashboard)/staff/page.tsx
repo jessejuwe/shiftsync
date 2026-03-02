@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { StaffSkillsManager } from "@/components/features/staff/staff-skills-manager";
+import { StaffManager } from "@/components/features/staff/staff-skills-manager";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Staff Skills",
-  description: "Manage staff skills for ShiftSync",
+  title: "Staff",
+  description: "Manage staff skills and certifications for ShiftSync",
 };
 
 export default async function StaffPage() {
@@ -17,7 +17,7 @@ export default async function StaffPage() {
 
   return (
     <div>
-      <StaffSkillsManager />
+      <StaffManager />
     </div>
   );
 }
