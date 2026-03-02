@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
+import { useEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
@@ -15,7 +17,8 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { CalendarDays, FileText, LayoutDashboard, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CalendarDays, FileText, LayoutDashboard, Clock, LogOut } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -23,9 +26,18 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const role = (session?.user as { role?: string } | undefined)?.role;
   const isAdmin = role === "ADMIN";
+  const isStaff = role === "STAFF";
+
+  // Redirect staff from dashboard to shifts
+  useEffect(() => {
+    if (status === "authenticated" && isStaff && pathname === "/") {
+      router.replace("/shifts");
+    }
+  }, [status, isStaff, pathname, router]);
 
   return (
     <SidebarProvider>
@@ -39,14 +51,16 @@ export default function DashboardLayout({
           <SidebarGroup>
             <SidebarGroupLabel>Navigation</SidebarGroupLabel>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/"}>
-                  <Link href="/">
-                    <LayoutDashboard />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {!isStaff && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/"}>
+                    <Link href="/">
+                      <LayoutDashboard />
+                      <span>Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === "/shifts"}>
                   <Link href="/shifts">
@@ -76,6 +90,24 @@ export default function DashboardLayout({
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
+        <SidebarFooter className="border-t border-sidebar-border">
+          <div className="flex flex-col gap-2 p-2">
+            {session?.user?.email && (
+              <p className="text-muted-foreground truncate px-2 text-xs">
+                {session.user.email}
+              </p>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="justify-start gap-2"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
+              <LogOut className="size-4" />
+              Sign out
+            </Button>
+          </div>
+        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <div className="flex flex-1 flex-col p-6">{children}</div>

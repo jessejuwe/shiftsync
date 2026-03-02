@@ -44,6 +44,16 @@ export async function DELETE(
         };
       }
 
+      // Staff can only unassign themselves; managers/admins can unassign anyone
+      const role = (session?.user as { role?: string })?.role;
+      const canManageOthers = role === "ADMIN" || role === "MANAGER";
+      if (assignment.userId !== session?.user?.id && !canManageOthers) {
+        return {
+          success: false as const,
+          error: { code: "FORBIDDEN", message: "You can only drop your own shifts" },
+        };
+      }
+
       // Auto-cancel pending swap requests that reference this assignment
       const affectedSwaps = await tx.swapRequest.findMany({
         where: {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { broadcastSwapApproved } from "@/lib/pusher-events";
 import {
@@ -36,6 +37,14 @@ export async function POST(
     return NextResponse.json(
       { code: "MISSING_FIELDS", message: "action and actorId required" },
       { status: 400 }
+    );
+  }
+
+  const session = await auth();
+  if (!session?.user?.id || actorId !== session.user.id) {
+    return NextResponse.json(
+      { code: "FORBIDDEN", message: "You can only respond to swap requests as yourself" },
+      { status: 403 }
     );
   }
 

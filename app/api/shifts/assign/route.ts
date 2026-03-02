@@ -67,6 +67,22 @@ export async function POST(request: NextRequest) {
   }
 
   const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  // Staff can only assign themselves (pick up); managers/admins can assign anyone
+  const role = (session.user as { role?: string })?.role;
+  const canManageOthers = role === "ADMIN" || role === "MANAGER";
+  if (userId !== session.user.id && !canManageOthers) {
+    return NextResponse.json(
+      { code: "FORBIDDEN", message: "You can only pick up shifts for yourself" },
+      { status: 403 }
+    );
+  }
 
   try {
     const result = await prisma.$transaction(async (tx) => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { broadcastSwapRequested } from "@/lib/pusher-events";
 import {
@@ -33,6 +34,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
   const { initiatorId, receiverId, initiatorShiftId, receiverShiftId, message } =
     body;
   if (!initiatorId || !receiverId || !initiatorShiftId) {
@@ -42,6 +51,14 @@ export async function POST(request: NextRequest) {
         message: "initiatorId, receiverId, initiatorShiftId required",
       },
       { status: 400 }
+    );
+  }
+
+  // Staff can only create swap requests for themselves
+  if (initiatorId !== session.user.id) {
+    return NextResponse.json(
+      { code: "FORBIDDEN", message: "You can only request swaps for your own shifts" },
+      { status: 403 }
     );
   }
 

@@ -18,7 +18,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,7 +37,12 @@ interface StaffMember {
   email: string;
   role: string;
   skills: { id: string; name: string }[];
-  certifications: { id: string; locationId: string; locationName: string; expiresAt: string }[];
+  certifications: {
+    id: string;
+    locationId: string;
+    locationName: string;
+    expiresAt: string;
+  }[];
 }
 
 interface StaffSelectModalProps {
@@ -68,7 +72,9 @@ export function StaffSelectModal({
   } | null>(null);
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [overrideReason, setOverrideReason] = useState("");
-  const [pendingOverrideUserId, setPendingOverrideUserId] = useState<string | null>(null);
+  const [pendingOverrideUserId, setPendingOverrideUserId] = useState<
+    string | null
+  >(null);
 
   const { data: staffData, isLoading } = useQuery({
     queryKey: ["staff", shiftLocationId],
@@ -86,7 +92,10 @@ export function StaffSelectModal({
     mutationFn: async ({
       userId,
       overrideReason: reason,
-    }: { userId: string; overrideReason?: string }) => {
+    }: {
+      userId: string;
+      overrideReason?: string;
+    }) => {
       if (!shiftId) throw new Error("No shift selected");
       const res = await fetch("/api/shifts/assign", {
         method: "POST",
@@ -101,7 +110,10 @@ export function StaffSelectModal({
       if (!res.ok) {
         const err = new Error(data.message ?? "Assignment failed") as Error & {
           status?: number;
-          details?: { blocks?: ValidationResult[]; warnings?: ValidationResult[] };
+          details?: {
+            blocks?: ValidationResult[];
+            warnings?: ValidationResult[];
+          };
           userId?: string;
         };
         err.status = res.status;
@@ -121,7 +133,11 @@ export function StaffSelectModal({
     onError: (err) => {
       const e = err as Error & {
         status?: number;
-        details?: { blocks?: Array<ValidationResult & { metadata?: { requiresOverride?: boolean } }> };
+        details?: {
+          blocks?: Array<
+            ValidationResult & { metadata?: { requiresOverride?: boolean } }
+          >;
+        };
         userId?: string;
       };
       const block = e.details?.blocks?.[0];
@@ -143,7 +159,7 @@ export function StaffSelectModal({
     if (!shiftId) return;
     try {
       const res = await fetch(
-        `/api/shifts/assign/preview?shiftId=${encodeURIComponent(shiftId)}&userId=${encodeURIComponent(userId)}`
+        `/api/shifts/assign/preview?shiftId=${encodeURIComponent(shiftId)}&userId=${encodeURIComponent(userId)}`,
       );
       const data = await res.json();
       const preview: AssignPreview = {
@@ -183,52 +199,81 @@ export function StaffSelectModal({
     }
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      assignMutation.reset();
+      setConfirmOpen(false);
+      setPendingAssign(null);
+      setOverrideDialogOpen(false);
+      setPendingOverrideUserId(null);
+      setOverrideReason("");
+    }
+    onOpenChange(nextOpen);
+  };
+
   const staff: StaffMember[] = staffData?.staff ?? [];
-  const validationError = assignMutation.error as (Error & {
-    status?: number;
-    details?: { blocks?: ValidationResult[]; warnings?: ValidationResult[] };
-  }) | undefined;
+  const validationError = assignMutation.error as
+    | (Error & {
+        status?: number;
+        details?: {
+          blocks?: ValidationResult[];
+          warnings?: ValidationResult[];
+        };
+      })
+    | undefined;
   const showValidation =
     validationError?.status === 422 && validationError?.details;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="flex max-h-[85vh] max-w-xl flex-col overflow-hidden ">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Assign staff</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          {showValidation && (
-            <ValidationDisplay
-              blocks={validationError.details?.blocks ?? []}
-              warnings={validationError.details?.warnings ?? []}
-              onAssignSuggestion={(userId) => handleAssignClick(userId)}
-            />
-          )}
-          {isLoading ? (
-            <p className="text-muted-foreground py-8 text-center text-sm">Loading staff...</p>
-          ) : (
-            <ScrollArea className="h-[320px] pr-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto max-h-[calc(85vh-7rem)]">
+          <div className="min-w-0 space-y-4">
+            {showValidation && (
+              <ValidationDisplay
+                blocks={validationError.details?.blocks ?? []}
+                warnings={validationError.details?.warnings ?? []}
+                onAssignSuggestion={(userId) => handleAssignClick(userId)}
+              />
+            )}
+            {isLoading ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">
+                Loading staff...
+              </p>
+            ) : (
               <div className="space-y-2">
                 {staff.map((s) => {
                   const hasAllSkills =
                     requiredSkillIds.length === 0 ||
-                    requiredSkillIds.every((rid) => s.skills.some((sk) => sk.id === rid));
+                    requiredSkillIds.every((rid) =>
+                      s.skills.some((sk) => sk.id === rid),
+                    );
                   return (
                     <div
                       key={s.id}
                       className={`flex items-center justify-between rounded-xl border p-4 transition-colors hover:bg-muted/50 ${
-                        !hasAllSkills ? "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20" : ""
+                        !hasAllSkills
+                          ? "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20"
+                          : ""
                       }`}
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{s.name}</p>
-                        <p className="text-muted-foreground truncate text-sm">{s.email}</p>
+                        <p className="text-muted-foreground truncate text-sm">
+                          {s.email}
+                        </p>
                         <div className="mt-2 flex flex-wrap gap-1">
                           {s.skills.map((sk) => (
                             <Badge
                               key={sk.id}
-                              variant={requiredSkillIds.includes(sk.id) ? "default" : "secondary"}
+                              variant={
+                                requiredSkillIds.includes(sk.id)
+                                  ? "default"
+                                  : "secondary"
+                              }
                               className="text-xs"
                             >
                               {sk.name}
@@ -242,7 +287,10 @@ export function StaffSelectModal({
                         disabled={!shiftId || assignMutation.isPending}
                         className="ml-4 shrink-0"
                       >
-                        {assignMutation.isPending ? "Assigning…" : "Assign"}
+                        {assignMutation.isPending &&
+                        assignMutation.variables?.userId === s.id
+                          ? "Assigning…"
+                          : "Assign"}
                       </Button>
                     </div>
                   );
@@ -253,8 +301,8 @@ export function StaffSelectModal({
                   </p>
                 )}
               </div>
-            </ScrollArea>
-          )}
+            )}
+          </div>
         </div>
       </DialogContent>
       <AlertDialog
