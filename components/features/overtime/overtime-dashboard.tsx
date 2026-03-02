@@ -238,14 +238,6 @@ export function OvertimeDashboard() {
                         >
                           {s.consecutiveDays}
                         </span>
-                        {s.is6thConsecutiveDay && (
-                          <Badge
-                            variant="outline"
-                            className="ml-2 border-amber-500 text-amber-700 dark:text-amber-400"
-                          >
-                            6th day
-                          </Badge>
-                        )}
                         {s.is7thOrMoreConsecutiveDay && (
                           <Badge
                             variant="outline"
