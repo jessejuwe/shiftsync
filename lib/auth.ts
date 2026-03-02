@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: {
-    strategy: "database",
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
     updateAge: 24 * 60 * 60, // 24 hours
   },
@@ -87,10 +87,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       return true;
     },
-    session({ session, user }) {
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as { role?: string }).role;
+      }
+      return token;
+    },
+    session({ session, token }) {
       if (session.user) {
-        session.user.id = user.id;
-        session.user.role = (user as { role?: string }).role;
+        session.user.id = (token.id as string) ?? token.sub!;
+        session.user.role = (token as { role?: string }).role;
       }
       return session;
     },
