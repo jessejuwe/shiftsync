@@ -66,18 +66,23 @@ export function useRealtimeSchedule({
       return;
     }
 
-    const pusher = new Pusher(key, {
+    const pusherConfig: {
+      cluster: string;
+      authEndpoint: string;
+      auth?: { headers: Record<string, string> };
+    } = {
       cluster,
       authEndpoint,
-      auth: userId
-        ? {
-            headers: {
-              "X-User-Id": userId,
-              Authorization: `Bearer ${userId}`,
-            },
-          }
-        : undefined,
-    });
+    };
+    if (userId) {
+      pusherConfig.auth = {
+        headers: {
+          "X-User-Id": userId,
+          Authorization: `Bearer ${userId}`,
+        },
+      };
+    }
+    const pusher = new Pusher(key, pusherConfig);
 
     pusherRef.current = pusher;
 
