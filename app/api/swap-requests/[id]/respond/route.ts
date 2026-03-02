@@ -81,14 +81,22 @@ export async function POST(
 
       if (
         action === "accept" &&
-        newState === "ACCEPTED" &&
+        newState === SwapState.ACCEPTED &&
         !context.requiresManagerApproval
       ) {
         const confirmResult = transition(newState, SwapEvent.CONFIRM, context);
-        if (confirmResult.success && confirmResult.newState) {
-          transitionResult = confirmResult;
-          newState = confirmResult.newState;
+        if (!confirmResult.success || !confirmResult.newState) {
+          return {
+            success: false as const,
+            error: {
+              code: "TRANSITION_FAILED",
+              message:
+                confirmResult.error ?? "Cannot auto-approve swap",
+            },
+          };
         }
+        transitionResult = confirmResult;
+        newState = confirmResult.newState;
       }
 
       const prismaStatus =
