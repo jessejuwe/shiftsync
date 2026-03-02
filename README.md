@@ -99,6 +99,62 @@ shiftsync/
 
 ---
 
+## Intentional Ambiguities — Design Decisions
+
+This section documents how ShiftSync handles ambiguities that were left unspecified in the evaluation criteria.
+
+### 1. Historical data when a staff member is de-certified from a location
+
+**Decision:** Historical data is preserved. De-certification only affects future assignments.
+
+**Rationale:** Past shifts and assignments are historical records; altering or cascading deletes would corrupt audit trails and reporting. Certification is enforced only at assignment time.
+
+**Implementation:** `ShiftAssignment` has no FK to `Certification`; certification checks use `expiresAt > now` for new assignments only; deleting/expiring a cert does not touch existing assignments.
+
+### 2. How "desired hours" interacts with availability windows
+
+**Decision:** They are independent. No interaction.
+
+**Rationale:** Desired hours are a fairness target (e.g. 40h/week); availability defines when staff can work. Combining them would require per-user desired hours and complex logic. Keeping them separate keeps the model simple and predictable.
+
+**Implementation:** Desired hours used only in fairness analytics (`targetHoursPerPeriod`, `desiredHoursDelta`, `equityScore`); availability used only in assignment validation (`checkAvailability`); no shared logic or data flow.
+
+### 3. Consecutive days: does a 1-hour shift count the same as an 11-hour shift?
+
+**Decision:** Yes. Any shift on a calendar day counts as one working day, regardless of duration.
+
+**Rationale:** The policy is "consecutive working days," not "consecutive hours." A 1-hour shift still requires the employee to work that day. Counting by calendar day is simple and aligns with common labor rules.
+
+**Implementation:** Consecutive days computed from unique calendar dates (`startsAt`/`endsAt` via `toDateKey`); overnight shifts contribute to both start and end dates; duration is not used.
+
+### 4. Shift edited after swap approval but before it occurs
+
+**Decision:** Edits after approval do not affect the swap. Only in-progress swaps are cancelled when a shift is edited.
+
+**Rationale:** Once a swap is approved, assignments are already swapped—the swap is complete. Editing the shift only updates the shift; it does not revalidate or undo the swap. Cancelling would require reverting assignments and would be confusing for staff.
+
+**Implementation:** `PATCH /api/shifts/[id]` only cancels swaps with `status: "PENDING"` (REQUESTED, ACCEPTED, PENDING_MANAGER); APPROVED swaps are not queried or modified; `SHIFT_EDITED` transitions pending swaps to CANCELLED and notifies both parties.
+
+### 5. Location that spans a timezone boundary
+
+**Decision:** Not supported. Each location has a single IANA timezone.
+
+**Rationale:** Supporting multiple timezones per location would complicate premium shift detection, availability, and display. Most real-world locations fit a single timezone; edge cases can be modeled as separate locations.
+
+**Implementation:** `Location` has one `timezone` field (e.g. `"America/New_York"`); premium shift detection uses that timezone; for locations spanning boundaries, choose one timezone or split into multiple locations.
+
+### Summary Table
+
+| Ambiguity | Decision |
+|-----------|----------|
+| Historical data when de-certified | Preserved; only future assignments require valid cert |
+| Desired hours vs availability | Independent; no interaction |
+| 1h vs 11h for consecutive days | Both count as one working day |
+| Shift edited after swap approval | Swap remains; only pending swaps cancelled on edit |
+| Location spans timezone boundary | Not supported; one timezone per location |
+
+---
+
 ## Concurrency
 
 - **Shift assignment:** `SELECT ... FOR UPDATE` on the user row before creating the assignment, inside a Prisma transaction. Prevents double-booking and race conditions when multiple managers assign the same user.
