@@ -435,11 +435,14 @@ export async function POST(request: NextRequest) {
             ? "double-booking"
             : conflictBlock?.code === "REST_VIOLATION"
               ? "rest-period"
-              : conflictBlock?.code === "WEEKLY_HOURS_EXCEEDED" ||
-                  conflictBlock?.code === "DAILY_HOURS_EXCEEDED" ||
-                  conflictBlock?.code === "DAILY_HOURS_WARNING"
-                ? "overtime"
-                : "double-booking";
+              : conflictBlock?.code === "AVAILABILITY_VIOLATION" ||
+                  conflictBlock?.code === "NO_AVAILABILITY_SET"
+                ? "availability"
+                : conflictBlock?.code === "WEEKLY_HOURS_EXCEEDED" ||
+                    conflictBlock?.code === "DAILY_HOURS_EXCEEDED" ||
+                    conflictBlock?.code === "DAILY_HOURS_WARNING"
+                  ? "overtime"
+                  : "double-booking";
         const isStaffPickup = userId === session.user.id;
         const staffMessage =
           isStaffPickup &&
@@ -530,7 +533,7 @@ export async function POST(request: NextRequest) {
           locationId: shift.locationId,
         },
       };
-    });
+    }, { timeout: 10000 });
 
     if (!result.success) {
       const { code, message, details, conflictPayload } = result.error;
@@ -549,6 +552,7 @@ export async function POST(request: NextRequest) {
           conflictType: conflictPayload.conflictType as
             | "double-booking"
             | "rest-period"
+            | "availability"
             | "overtime",
           message: conflictPayload.message,
         });

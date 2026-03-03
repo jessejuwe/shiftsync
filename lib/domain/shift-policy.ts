@@ -15,6 +15,7 @@ export type ValidationCode =
   | "SKILL_MISMATCH"
   | "CERTIFICATION_REQUIRED"
   | "AVAILABILITY_VIOLATION"
+  | "NO_AVAILABILITY_SET"
   | "DAILY_HOURS_EXCEEDED"
   | "DAILY_HOURS_WARNING"
   | "WEEKLY_HOURS_EXCEEDED"
@@ -292,10 +293,14 @@ export function checkAvailability(
 
   const qualified = allUsersWithAvailability.filter((u) => u.hasAvailability);
 
+  const hasNoAvailability = userWindows.length === 0;
+
   return {
-    type: "warning",
-    code: "AVAILABILITY_VIOLATION",
-    message: "Shift falls outside user's declared availability.",
+    type: "block",
+    code: hasNoAvailability ? "NO_AVAILABILITY_SET" : "AVAILABILITY_VIOLATION",
+    message: hasNoAvailability
+      ? "User has not set availability for this location. Set availability before picking up shifts."
+      : "Shift falls outside user's declared availability.",
     suggestions: qualified.map((u) => ({ id: u.id, name: u.name, email: u.email })),
   };
 }
@@ -619,7 +624,7 @@ export function validateShiftAssignment(
     userAvailabilityWindows,
     allUsersWithAvailability
   );
-  if (availability) warnings.push(availability);
+  if (availability) blocks.push(availability);
 
   const dailyHours = checkDailyHoursLimit(
     shift,

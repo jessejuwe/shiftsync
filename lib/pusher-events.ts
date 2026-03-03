@@ -66,7 +66,7 @@ export interface SwapApprovedPayload {
 export interface AssignmentConflictPayload {
   shiftId: string;
   userId: string;
-  conflictType: "double-booking" | "rest-period" | "overtime";
+  conflictType: "double-booking" | "rest-period" | "availability" | "overtime";
   message?: string;
 }
 

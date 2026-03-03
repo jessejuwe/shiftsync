@@ -292,7 +292,7 @@ describe("shift-policy domain", () => {
       expect(checkAvailability(s, windows, allUsers)).toBeNull();
     });
 
-    it("returns warning when shift outside availability", () => {
+    it("returns block when shift outside availability", () => {
       const s = shift(
         "s1",
         "loc1",
@@ -315,7 +315,25 @@ describe("shift-policy domain", () => {
       const result = checkAvailability(s, windows, allUsers);
       expect(result).not.toBeNull();
       expect(result!.code).toBe("AVAILABILITY_VIOLATION");
-      expect(result!.type).toBe("warning");
+      expect(result!.type).toBe("block");
+    });
+
+    it("returns NO_AVAILABILITY_SET block when user has no availability windows", () => {
+      const s = shift(
+        "s1",
+        "loc1",
+        "2024-01-15T10:00:00.000Z",
+        "2024-01-15T14:00:00.000Z",
+      );
+      const windows: PolicyAvailabilityWindow[] = [];
+      const allUsers = [
+        { id: "u2", name: "Bob", email: "b@x.com", hasAvailability: true },
+      ];
+      const result = checkAvailability(s, windows, allUsers);
+      expect(result).not.toBeNull();
+      expect(result!.code).toBe("NO_AVAILABILITY_SET");
+      expect(result!.type).toBe("block");
+      expect(result!.message).toContain("not set availability");
     });
   });
 
