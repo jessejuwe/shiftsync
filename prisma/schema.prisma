@@ -1,0 +1,376 @@
+// ShiftSync - Prisma Schema
+// All timestamps stored in UTC
+// Connection URLs are configured in prisma.config.ts
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum SwapRequestStatus {
+  PENDING       // REQUESTED or ACCEPTED (receiver hasn't responded or just accepted)
+  PENDING_MANAGER  // Receiver accepted, awaiting manager approval
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum NotificationType {
+  SHIFT_ASSIGNED
+  SHIFT_REMOVED
+  SWAP_REQUEST
+  SWAP_APPROVED
+  SWAP_REJECTED
+  SWAP_CANCELLED
+  SWAP_PENDING_APPROVAL
+  AVAILABILITY_REMINDER
+  SYSTEM
+}
+
+enum NotificationPreference {
+  IN_APP_ONLY
+  IN_APP_AND_EMAIL
+}
+
+// =============================================================================
+// USER & AUTH
+// =============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  passwordHash  String?   @map("password_hash")
+  name          String
+  role          Role      @default(STAFF)
+  avatarUrl     String?   @map("avatar_url")
+  image         String?   // Auth.js / OAuth avatar (synced with avatarUrl when needed)
+  isActive                Boolean               @default(true) @map("is_active")
+  notificationPreference  NotificationPreference @default(IN_APP_ONLY) @map("notification_preference")
+  desiredHoursPerWeek     Float?                @map("desired_hours_per_week") // For fairness analytics
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+
+  // Auth.js relations
+  accounts Account[]
+  sessions Session[]
+
+  // Relations
+  staffSkills         StaffSkill[]
+  certifications      Certification[]
+  shiftAssignments    ShiftAssignment[]
+  availabilityWindows AvailabilityWindow[]
+  swapRequestsInitiated SwapRequest[] @relation("SwapRequestInitiator")
+  swapRequestsReceived SwapRequest[]  @relation("SwapRequestReceiver")
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+// Auth.js / NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// =============================================================================
+// LOCATION
+// =============================================================================
+
+model Location {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  timezone    String   // IANA timezone (e.g. "America/New_York")
+  hourlyRate  Float?   @map("hourly_rate") // Optional: for overtime cost projection
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  certifications   Certification[]
+  shifts           Shift[]
+  availabilityWindows AvailabilityWindow[]
+  auditLogs        AuditLog[]
+
+  @@index([isActive])
+  @@map("locations")
+}
+
+// =============================================================================
+// SKILLS & CERTIFICATIONS
+// =============================================================================
+
+model Skill {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  staffSkills StaffSkill[]
+  shiftSkills ShiftSkill[]
+
+  @@map("skills")
+}
+
+model StaffSkill {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  skillId   String   @map("skill_id")
+  level     Int?     // Optional proficiency level (1-5)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@index([userId])
+  @@index([skillId])
+  @@map("staff_skills")
+}
+
+// Certification is staff-location specific (e.g. CPR cert valid at Location A)
+model Certification {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  locationId   String    @map("location_id")
+  name         String
+  issuedAt     DateTime  @map("issued_at") // UTC
+  expiresAt    DateTime  @map("expires_at") // UTC
+  documentUrl  String?   @map("document_url")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([locationId])
+  @@index([expiresAt]) // For expiry checks
+  @@index([userId, locationId])
+  @@map("certifications")
+}
+
+// =============================================================================
+// SHIFTS
+// =============================================================================
+
+model Shift {
+  id          String   @id @default(cuid())
+  locationId  String   @map("location_id")
+  // All times in UTC. Overnight: startsAt 22:00 day1, endsAt 06:00 day2
+  startsAt    DateTime @map("starts_at")
+  endsAt      DateTime @map("ends_at")
+  title       String?
+  notes       String?
+  headcount   Int      @default(1) @map("headcount") // Max staff that can be assigned
+  isPublished Boolean  @default(false) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  location       Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  requiredSkills ShiftSkill[]     @relation("ShiftRequiredSkill")
+  assignments    ShiftAssignment[]
+
+  @@index([locationId])
+  @@index([startsAt, endsAt]) // Conflict detection, range queries
+  @@index([locationId, startsAt])
+  @@index([isPublished])
+  @@map("shifts")
+}
+
+// Many-to-many: shifts can require multiple skills
+model ShiftSkill {
+  id       String @id @default(cuid())
+  shiftId  String @map("shift_id")
+  skillId  String @map("skill_id")
+
+  shift Shift @relation("ShiftRequiredSkill", fields: [shiftId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, skillId])
+  @@index([shiftId])
+  @@index([skillId])
+  @@map("shift_skills")
+}
+
+model ShiftAssignment {
+  id          String    @id @default(cuid())
+  shiftId     String    @map("shift_id")
+  userId      String    @map("user_id")
+  status      String    @default("confirmed") // confirmed, tentative, dropped
+  clockedInAt DateTime? @map("clocked_in_at") // When staff clocked in
+  clockedOutAt DateTime? @map("clocked_out_at") // When staff clocked out
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  swapRequestsAsInitiator SwapRequest[] @relation("SwapRequestInitiatorShift")
+
+  @@unique([shiftId, userId]) // One assignment per user per shift
+  @@index([shiftId])
+  @@index([userId])
+  @@index([userId, shiftId]) // Conflict detection: user's shifts
+  @@map("shift_assignments")
+}
+
+// =============================================================================
+// AVAILABILITY
+// =============================================================================
+
+model AvailabilityWindow {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  locationId String   @map("location_id")
+  // Recurring or one-off availability. All times in UTC.
+  startsAt   DateTime @map("starts_at")
+  endsAt     DateTime @map("ends_at")
+  dayOfWeek  Int?     @map("day_of_week") // 0-6 (Sun-Sat) for recurring
+  isRecurring Boolean @default(false) @map("is_recurring")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([locationId])
+  @@index([userId, locationId])
+  @@index([startsAt, endsAt])
+  @@map("availability_windows")
+}
+
+// =============================================================================
+// SWAP REQUESTS
+// =============================================================================
+
+model SwapRequest {
+  id              String            @id @default(cuid())
+  initiatorId     String            @map("initiator_id")
+  receiverId      String            @map("receiver_id")
+  initiatorShiftId String           @map("initiator_shift_id")
+  receiverShiftId String?           @map("receiver_shift_id") // Optional: direct swap vs. drop
+  status          SwapRequestStatus @default(PENDING)
+  message         String?
+  respondedAt     DateTime?         @map("responded_at") // UTC
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  initiator       User              @relation("SwapRequestInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  receiver        User              @relation("SwapRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  initiatorShift  ShiftAssignment   @relation("SwapRequestInitiatorShift", fields: [initiatorShiftId], references: [id], onDelete: Cascade)
+
+  @@index([initiatorId])
+  @@index([receiverId])
+  @@index([status])
+  @@index([initiatorId, status])
+  @@index([receiverId, status])
+  @@map("swap_requests")
+}
+
+// =============================================================================
+// NOTIFICATIONS
+// =============================================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String?
+  data      Json?            // Flexible payload (shiftId, swapRequestId, etc.)
+  readAt    DateTime?        @map("read_at") // UTC
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, readAt]) // Unread: where readAt is null
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// =============================================================================
+// AUDIT LOG
+// =============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type") // "Shift", "ShiftAssignment", "User", etc.
+  entityId   String   @map("entity_id")
+  changes    Json?    // { before?: {...}, after?: {...} } or action-specific payload
+  locationId String?  @map("location_id")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([action])
+  @@index([locationId])
+  @@map("audit_logs")
+}

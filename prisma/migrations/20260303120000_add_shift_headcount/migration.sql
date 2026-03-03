@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "shifts" ADD COLUMN IF NOT EXISTS "headcount" INTEGER NOT NULL DEFAULT 1;

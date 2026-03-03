@@ -1,0 +1,55 @@
+import { isServer, defaultShouldDehydrateQuery, QueryClient, type QueryClientConfig } from "@tanstack/react-query";
+
+const FIVE_MINUTES = 1000 * 60 * 5;
+
+const queryConfig: QueryClientConfig = {
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Disable refetching on window focus
+      refetchOnReconnect: false,
+      retry: 0, // Number of retries before failing the query
+      staleTime: FIVE_MINUTES, // 5 minutes
+      refetchInterval: FIVE_MINUTES, // Auto-refresh active queries every 5 minutes
+    },
+    dehydrate: {
+      // include pending queries in dehydration
+      shouldDehydrateQuery: query => defaultShouldDehydrateQuery(query) || query.state.status === "pending",
+      shouldRedactErrors: error => {
+        // We should not catch Next.js server errors
+        // as that's how Next.js detects dynamic pages
+        // so we cannot redact them.
+        // Next.js also automatically redacts errors for us
+        // with better digests.
+        return false;
+      },
+    },
+  },
+};
+
+function makeQueryClient() {
+  return new QueryClient(queryConfig);
+}
+
+let browserQueryClient: QueryClient | undefined = undefined;
+
+export function getQueryClient() {
+  if (isServer) {
+    // Server: always make a new query client
+    return makeQueryClient();
+  } else {
+    // Browser: make a new query client if we don't already have one
+    // This is very important, so we don't re-make a new client if React
+    // suspends during the initial render. This may not be needed if we
+    // have a suspense boundary BELOW the creation of the query client
+    if (!browserQueryClient) browserQueryClient = makeQueryClient();
+    return browserQueryClient;
+  }
+}
+
+export function resetQueryClient() {
+  const queryClient = getQueryClient();
+  queryClient.clear();
+  if (browserQueryClient) {
+    browserQueryClient.clear();
+  }
+}

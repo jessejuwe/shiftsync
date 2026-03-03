@@ -1,0 +1,149 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import {
+  totalHoursPerStaff,
+  premiumShiftsPerStaff,
+  desiredHoursDelta,
+  equityScore,
+  type AssignmentLike,
+  DEFAULT_FAIRNESS_CONFIG,
+} from "@/lib/domain/fairness";
+
+function getWeekStart(d: Date): Date {
+  const date = new Date(d);
+  const day = date.getUTCDay();
+  const diff = date.getUTCDate() - day + (day === 0 ? -6 : 1);
+  date.setUTCDate(diff);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+}
+
+function toAssignmentLike(
+  a: {
+    id: string;
+    shiftId: string;
+    userId: string;
+    shift: { startsAt: Date; endsAt: Date; location?: { timezone: string } | null };
+  },
+  defaultTimezone?: string
+): AssignmentLike {
+  const timezone = a.shift.location?.timezone ?? defaultTimezone;
+  return {
+    id: a.id,
+    shiftId: a.shiftId,
+    userId: a.userId,
+    startsAt: a.shift.startsAt,
+    endsAt: a.shift.endsAt,
+    ...(timezone && { timezone }),
+  };
+}
+
+/**
+ * GET /api/fairness/dashboard?locationId=...&weekStart=...
+ * Returns fairness analytics: hours, premium shifts, equity.
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const locationId = searchParams.get("locationId");
+  const weekStartParam = searchParams.get("weekStart");
+  const weekCount = Math.min(4, Math.max(1, parseInt(searchParams.get("weekCount") ?? "1", 10) || 1));
+
+  const now = new Date();
+  const weekStart = weekStartParam
+    ? getWeekStart(new Date(weekStartParam))
+    : getWeekStart(now);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + weekCount * 7 - 1);
+  weekEnd.setUTCHours(23, 59, 59, 999);
+
+  const staff = await prisma.user.findMany({
+    where: {
+      isActive: true,
+      role: { in: ["STAFF", "MANAGER"] },
+    },
+    select: { id: true, name: true, email: true, desiredHoursPerWeek: true },
+    orderBy: { name: "asc" },
+  });
+
+  const allAssignments = await Promise.all(
+    staff.map(async (s) => {
+      const assignments = await prisma.shiftAssignment.findMany({
+        where: {
+          userId: s.id,
+          shift: {
+            ...(locationId && { locationId }),
+            startsAt: { gte: weekStart, lte: weekEnd },
+          },
+        },
+        include: {
+          shift: {
+            select: {
+              startsAt: true,
+              endsAt: true,
+              location: { select: { timezone: true } },
+            },
+          },
+        },
+      });
+      return { userId: s.id, assignments, staff: s };
+    })
+  );
+
+  const locations = locationId
+    ? await prisma.location.findUnique({
+        where: { id: locationId },
+        select: { timezone: true },
+      })
+    : null;
+  const defaultTimezone = locations?.timezone;
+
+  const flatAssignments: AssignmentLike[] = [];
+  for (const { userId, assignments } of allAssignments) {
+    for (const a of assignments) {
+      flatAssignments.push(toAssignmentLike(a, defaultTimezone));
+    }
+  }
+
+  const defaultTarget = DEFAULT_FAIRNESS_CONFIG.targetHoursPerPeriod ?? 40;
+  const targetHoursMap = new Map<string, number>();
+  for (const s of staff) {
+    const weekly = s.desiredHoursPerWeek ?? defaultTarget;
+    targetHoursMap.set(s.id, weekly * weekCount);
+  }
+
+  const hoursMap = totalHoursPerStaff(flatAssignments);
+  const premiumMap = premiumShiftsPerStaff(flatAssignments);
+  const deltaMap = desiredHoursDelta(hoursMap, targetHoursMap);
+  const equityMap = equityScore(hoursMap, premiumMap, targetHoursMap);
+
+  const staffFairness = allAssignments.map(({ userId, staff: s }) => {
+    const hours = Math.round((hoursMap.get(userId) ?? 0) * 10) / 10;
+    const premium = premiumMap.get(userId) ?? 0;
+    const delta = Math.round((deltaMap.get(userId) ?? 0) * 10) / 10;
+    const equity = equityMap.get(userId) ?? 50;
+    const targetHours = targetHoursMap.get(userId) ?? defaultTarget * weekCount;
+
+    return {
+      userId: s.id,
+      name: s.name,
+      email: s.email,
+      totalHours: hours,
+      premiumShifts: premium,
+      hoursDelta: delta,
+      equityScore: equity,
+      isOverScheduled: delta > 2,
+      isUnderScheduled: delta < -2,
+      desiredHoursPerWeek: s.desiredHoursPerWeek ?? defaultTarget,
+      targetHours,
+    };
+  });
+
+  return NextResponse.json({
+    weekStart: weekStart.toISOString(),
+    weekEnd: weekEnd.toISOString(),
+    locationId: locationId ?? null,
+    weekCount,
+    targetHours: defaultTarget,
+    staff: staffFairness.sort((a, b) => b.totalHours - a.totalHours),
+  });
+}

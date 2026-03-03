@@ -1,0 +1,322 @@
+import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@/generated/prisma/client";
+
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { broadcastSwapRequested } from "@/lib/pusher-events";
+import { REQUIRES_MANAGER_APPROVAL } from "@/lib/swap-config";
+import {
+  SwapState,
+  SwapEvent,
+  transition,
+  toPrismaStatus,
+  canCreateSwap,
+  getDefaultExpiration,
+  getDropExpiration,
+  getSwapRequestExpiration,
+} from "@/lib/domain/swap-workflow";
+
+/**
+ * GET /api/swap-requests?role=receiver|initiator|all|pending_approval&status=PENDING_MANAGER
+ * List swap requests. pending_approval: managers see swaps awaiting their approval.
+ */
+export async function GET(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const role = searchParams.get("role") ?? "all";
+  const roleType = (session.user as { role?: string }).role;
+  const canManage = roleType === "ADMIN" || roleType === "MANAGER";
+
+  const where: Prisma.SwapRequestWhereInput =
+    role === "pending_approval" && canManage
+      ? { status: "PENDING_MANAGER" }
+      : role === "receiver"
+        ? { receiverId: session.user.id }
+        : role === "initiator"
+          ? { initiatorId: session.user.id }
+          : {
+              OR: [
+                { receiverId: session.user.id },
+                { initiatorId: session.user.id },
+              ],
+            };
+
+  const swapRequests = await prisma.swapRequest.findMany({
+    where,
+    include: {
+      initiator: { select: { id: true, name: true, email: true } },
+      receiver: { select: { id: true, name: true, email: true } },
+      initiatorShift: {
+        include: {
+          shift: {
+            include: {
+              location: { select: { id: true, name: true, timezone: true } },
+            },
+          },
+          user: { select: { id: true, name: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  const items = swapRequests.map((sr) => {
+    const initShift = sr.initiatorShift;
+    return {
+      id: sr.id,
+      status: sr.status,
+      message: sr.message,
+      createdAt: sr.createdAt.toISOString(),
+      respondedAt: sr.respondedAt?.toISOString() ?? null,
+      initiatorId: sr.initiatorId,
+      initiator: sr.initiator,
+      receiverId: sr.receiverId,
+      receiver: sr.receiver,
+      initiatorShiftId: sr.initiatorShiftId,
+      receiverShiftId: sr.receiverShiftId,
+      initiatorShift: {
+        id: initShift.id,
+        shiftId: initShift.shiftId,
+        shift: {
+          id: initShift.shift.id,
+          startsAt: initShift.shift.startsAt.toISOString(),
+          endsAt: initShift.shift.endsAt.toISOString(),
+          location: initShift.shift.location,
+        },
+        user: initShift.user,
+      },
+    };
+  });
+
+  return NextResponse.json({ swapRequests: items });
+}
+
+/**
+ * POST /api/swap-requests
+ * Create a swap request. Runs in transaction with notifications and audit.
+ */
+export async function POST(request: NextRequest) {
+  let body: {
+    initiatorId: string;
+    receiverId: string;
+    initiatorShiftId: string;
+    receiverShiftId?: string;
+    message?: string;
+  };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { code: "INVALID_JSON", message: "Invalid request body" },
+      { status: 400 }
+    );
+  }
+
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  const { initiatorId, receiverId, initiatorShiftId, receiverShiftId, message } =
+    body;
+  if (!initiatorId || !receiverId || !initiatorShiftId) {
+    return NextResponse.json(
+      {
+        code: "MISSING_FIELDS",
+        message: "initiatorId, receiverId, initiatorShiftId required",
+      },
+      { status: 400 }
+    );
+  }
+
+  // Staff can only create swap requests for themselves
+  if (initiatorId !== session.user.id) {
+    return NextResponse.json(
+      { code: "FORBIDDEN", message: "You can only request swaps for your own shifts" },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const initiatorShift = await tx.shiftAssignment.findUnique({
+        where: { id: initiatorShiftId },
+        include: { shift: true },
+      });
+
+      if (!initiatorShift || initiatorShift.userId !== initiatorId) {
+        return {
+          success: false as const,
+          error: {
+            code: "NOT_FOUND",
+            message: "Initiator shift not found",
+          },
+        };
+      }
+
+      if (receiverShiftId) {
+        const receiverShift = await tx.shiftAssignment.findUnique({
+          where: { id: receiverShiftId },
+        });
+        if (!receiverShift || receiverShift.userId !== receiverId) {
+          return {
+            success: false as const,
+            error: {
+              code: "NOT_FOUND",
+              message:
+                "Receiver shift not found or does not belong to receiver",
+            },
+          };
+        }
+      }
+
+      const initiatorPendingCount = await tx.swapRequest.count({
+        where: {
+          initiatorId,
+          status: { in: ["PENDING", "PENDING_MANAGER"] },
+        },
+      });
+      if (!canCreateSwap(initiatorPendingCount).valid) {
+        return {
+          success: false as const,
+          error: {
+            code: "MAX_PENDING_SWAPS",
+            message: canCreateSwap(initiatorPendingCount).error,
+          },
+        };
+      }
+
+      const receiverPendingCount = await tx.swapRequest.count({
+        where: {
+          receiverId,
+          status: { in: ["PENDING", "PENDING_MANAGER"] },
+        },
+      });
+      if (!canCreateSwap(receiverPendingCount).valid) {
+        return {
+          success: false as const,
+          error: {
+            code: "MAX_PENDING_SWAPS",
+            message: "Receiver has too many pending swap requests.",
+          },
+        };
+      }
+
+      const createdAt = new Date();
+      const expiresAt = getSwapRequestExpiration({
+        initiatorShiftStartsAt: initiatorShift.shift.startsAt,
+        receiverShiftId: receiverShiftId ?? null,
+        createdAt,
+      });
+
+      const transitionResult = transition(SwapState.ACTIVE, SwapEvent.SEND, {
+        initiatorId,
+        receiverId,
+        actorId: initiatorId,
+        requiresManagerApproval: REQUIRES_MANAGER_APPROVAL,
+        expiresAt,
+        now: createdAt,
+      });
+
+      if (!transitionResult.success || !transitionResult.newState) {
+        return {
+          success: false as const,
+          error: {
+            code: "TRANSITION_FAILED",
+            message: transitionResult.error,
+          },
+        };
+      }
+
+      const swapRequest = await tx.swapRequest.create({
+        data: {
+          initiatorId,
+          receiverId,
+          initiatorShiftId,
+          receiverShiftId,
+          message,
+          status: toPrismaStatus(transitionResult.newState),
+        },
+      });
+
+      for (const n of transitionResult.notifications) {
+        const userId = n.target === "receiver" ? receiverId : initiatorId;
+        await tx.notification.create({
+          data: {
+            userId,
+            type: "SWAP_REQUEST",
+            title: n.title,
+            body: n.body,
+            data: (n.data ?? {}) as Prisma.InputJsonValue,
+          },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          userId: initiatorId,
+          action: "SWAP_REQUEST",
+          entityType: "SwapRequest",
+          entityId: swapRequest.id,
+          changes: {
+            initiatorShiftId,
+            receiverShiftId,
+            receiverId,
+          },
+        },
+      });
+
+      return {
+        success: true as const,
+        data: {
+          swapRequest: {
+            id: swapRequest.id,
+            status: swapRequest.status,
+            initiatorId,
+            receiverId,
+          },
+        },
+      };
+    });
+
+    if (!result.success) {
+      const status =
+        result.error.code === "NOT_FOUND"
+          ? 404
+          : result.error.code === "MAX_PENDING_SWAPS"
+            ? 422
+            : 400;
+      return NextResponse.json(
+        { code: result.error.code, message: result.error.message },
+        { status }
+      );
+    }
+
+    await broadcastSwapRequested(receiverId, {
+      swapRequestId: result.data.swapRequest.id,
+      initiatorId,
+      receiverId,
+      initiatorShiftId,
+      receiverShiftId,
+    });
+
+    return NextResponse.json(result.data, { status: 201 });
+  } catch (err) {
+    console.error("Swap request error:", err);
+    return NextResponse.json(
+      { code: "INTERNAL_ERROR", message: "An unexpected error occurred" },
+      { status: 500 }
+    );
+  }
+}
