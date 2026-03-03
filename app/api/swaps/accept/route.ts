@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   broadcastSwapApproved,
   broadcastShiftAssigned,
 } from "@/lib/pusher-events";
+import { REQUIRES_MANAGER_APPROVAL } from "@/lib/swap-config";
 import {
   SwapState,
   SwapEvent,
@@ -20,7 +22,15 @@ import { executeSwap } from "@/lib/domain/swap-execute";
  * Runs in transaction with constraint validation, notifications, and audit.
  */
 export async function POST(request: NextRequest) {
-  let body: { swapRequestId: string; actorId: string };
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  let body: { swapRequestId: string; actorId?: string };
   try {
     body = await request.json();
   } catch {
@@ -30,10 +40,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { swapRequestId, actorId } = body;
-  if (!swapRequestId || !actorId) {
+  const { swapRequestId } = body;
+  const actorId = session.user.id;
+  if (!swapRequestId) {
     return NextResponse.json(
-      { code: "MISSING_FIELDS", message: "swapRequestId and actorId required" },
+      { code: "MISSING_FIELDS", message: "swapRequestId required" },
       { status: 400 }
     );
   }
@@ -52,6 +63,16 @@ export async function POST(request: NextRequest) {
         };
       }
 
+      if (swapRequest.receiverId !== actorId) {
+        return {
+          success: false as const,
+          error: {
+            code: "FORBIDDEN",
+            message: "Only the receiver can accept this swap request",
+          },
+        };
+      }
+
       const expiresAt = getSwapRequestExpiration({
         initiatorShiftStartsAt: swapRequest.initiatorShift.shift.startsAt,
         receiverShiftId: swapRequest.receiverShiftId,
@@ -61,7 +82,7 @@ export async function POST(request: NextRequest) {
         initiatorId: swapRequest.initiatorId,
         receiverId: swapRequest.receiverId,
         actorId,
-        requiresManagerApproval: false,
+        requiresManagerApproval: REQUIRES_MANAGER_APPROVAL,
         expiresAt,
       };
 

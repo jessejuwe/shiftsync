@@ -90,12 +90,28 @@ export async function PATCH(
     }
     updateData.dayOfWeek = dayOfWeek;
     updateData.isRecurring = true;
+  } else if (isRecurring) {
+    return NextResponse.json(
+      {
+        code: "MISSING_FIELDS",
+        message:
+          "dayOfWeek, startTime, and endTime are required for recurring availability",
+      },
+      { status: 400 }
+    );
   } else if (!isRecurring && body.startsAt && body.endsAt) {
     updateData.startsAt = new Date(body.startsAt);
     updateData.endsAt = new Date(body.endsAt);
     updateData.dayOfWeek = null;
     updateData.isRecurring = false;
   } else if (Object.keys(body).length === 0) {
+    return NextResponse.json(
+      { code: "MISSING_FIELDS", message: "No fields to update" },
+      { status: 400 }
+    );
+  }
+
+  if (Object.keys(updateData).length === 0) {
     return NextResponse.json(
       { code: "MISSING_FIELDS", message: "No fields to update" },
       { status: 400 }

@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { broadcastSwapRequested } from "@/lib/pusher-events";
+import { REQUIRES_MANAGER_APPROVAL } from "@/lib/swap-config";
 import {
   SwapState,
   SwapEvent,
   transition,
   toPrismaStatus,
   canCreateSwap,
-  getDefaultExpiration,
+  getSwapRequestExpiration,
 } from "@/lib/domain/swap-workflow";
 
 /**
@@ -17,6 +19,14 @@ import {
  * Create a swap request. Runs in transaction with notifications and audit.
  */
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
   let body: {
     initiatorId: string;
     receiverId: string;
@@ -47,6 +57,13 @@ export async function POST(request: NextRequest) {
         message: "initiatorId, receiverId, initiatorShiftId required",
       },
       { status: 400 },
+    );
+  }
+
+  if (initiatorId !== session.user.id) {
+    return NextResponse.json(
+      { code: "FORBIDDEN", message: "You can only request swaps for your own shifts" },
+      { status: 403 }
     );
   }
 
@@ -115,13 +132,17 @@ export async function POST(request: NextRequest) {
       }
 
       const createdAt = new Date();
-      const expiresAt = getDefaultExpiration(createdAt);
+      const expiresAt = getSwapRequestExpiration({
+        initiatorShiftStartsAt: initiatorShift.shift.startsAt,
+        receiverShiftId: receiverShiftId ?? null,
+        createdAt,
+      });
 
       const transitionResult = transition(SwapState.ACTIVE, SwapEvent.SEND, {
         initiatorId,
         receiverId,
         actorId: initiatorId,
-        requiresManagerApproval: false,
+        requiresManagerApproval: REQUIRES_MANAGER_APPROVAL,
         expiresAt,
         now: createdAt,
       });

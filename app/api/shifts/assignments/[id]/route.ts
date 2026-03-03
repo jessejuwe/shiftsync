@@ -132,9 +132,11 @@ export async function DELETE(
     });
 
     if (!result.success) {
+      const status =
+        result.error.code === "FORBIDDEN" ? 403 : 404;
       return NextResponse.json(
         { code: result.error.code, message: result.error.message },
-        { status: 404 }
+        { status }
       );
     }
 
