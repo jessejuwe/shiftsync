@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -16,6 +17,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "@/components/features/notifications/notification-center";
@@ -29,6 +32,15 @@ import {
   Settings,
   Users,
 } from "lucide-react";
+
+function MobileSidebarCloseOnNavigate() {
+  const pathname = usePathname();
+  const { setOpenMobile, isMobile } = useSidebar();
+  useEffect(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [pathname, isMobile, setOpenMobile]);
+  return null;
+}
 
 export default function DashboardLayout({
   children,
@@ -45,6 +57,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
+      <MobileSidebarCloseOnNavigate />
       <Sidebar>
         <SidebarHeader className="border-b border-sidebar-border">
           <div className="flex items-center justify-between gap-2 py-3">
@@ -146,7 +159,24 @@ export default function DashboardLayout({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <div className="flex flex-1 flex-col p-6">{children}</div>
+        {/* Mobile header: hamburger, logo, actions - visible only when sidebar is in drawer */}
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4 md:hidden">
+          <SidebarTrigger className="-ml-2 size-10 touch-manipulation" aria-label="Open menu" />
+          <div className="flex flex-1 items-center justify-center">
+            <Image
+              src="/assets/logo.png"
+              alt="ShiftSync"
+              width={100}
+              height={28}
+              className="h-7 w-auto object-contain"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <NotificationCenter />
+          </div>
+        </header>
+        <div className="flex flex-1 flex-col p-4 sm:p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -170,9 +170,9 @@ export function FairnessDashboard() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-xl font-semibold">Fairness Analytics</h2>
           <p className="text-muted-foreground text-sm">
             Hours distribution • Premium shifts (Fri/Sat eve) • Over/under
@@ -213,19 +213,19 @@ export function FairnessDashboard() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 shrink-0 touch-manipulation"
               onClick={() => setWeekOffset((o) => o - 1)}
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="min-w-[180px] px-2 text-center text-sm">
+            <span className="min-w-[120px] shrink-0 px-2 text-center text-sm sm:min-w-[180px]">
               {format(weekStartDate, "MMM d")} –{" "}
               {format(weekEndDate, "MMM d, yyyy")}
             </span>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 shrink-0 touch-manipulation"
               onClick={() => setWeekOffset((o) => o + 1)}
             >
               <ChevronRight className="size-4" />
@@ -244,11 +244,11 @@ export function FairnessDashboard() {
         </p>
       ) : (
         <>
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+            <Card className="min-w-0 overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Scale className="size-5" />
+                  <Scale className="size-5 shrink-0" />
                   Hours per staff
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -258,7 +258,7 @@ export function FairnessDashboard() {
               <CardContent>
                 <ChartContainer
                   config={hoursChartConfig}
-                  className="min-h-[280px] w-full"
+                  className="aspect-auto h-[220px] w-full min-w-0 sm:h-[280px]"
                 >
                   <BarChart
                     accessibilityLayer
@@ -299,10 +299,10 @@ export function FairnessDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="min-w-0 overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="size-5" />
+                  <Sparkles className="size-5 shrink-0" />
                   Premium shift distribution
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -312,7 +312,7 @@ export function FairnessDashboard() {
               <CardContent>
                 <ChartContainer
                   config={premiumChartConfig}
-                  className="min-h-[280px] w-full"
+                  className="aspect-auto h-[220px] w-full min-w-0 sm:h-[280px]"
                 >
                   <BarChart
                     accessibilityLayer
@@ -354,7 +354,7 @@ export function FairnessDashboard() {
             </Card>
           </div>
 
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Staff fairness summary</CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -363,6 +363,7 @@ export function FairnessDashboard() {
               </p>
             </CardHeader>
             <CardContent>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -453,6 +454,7 @@ export function FairnessDashboard() {
                   })}
                 </TableBody>
               </Table>
+              </div>
               {showPagination && (
                 <TablePagination
                   currentPage={currentPage}

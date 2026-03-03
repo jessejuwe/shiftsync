@@ -161,7 +161,7 @@ export function ShiftCard({
             </div>
           )}
         </div>
-        <div className="mt-auto flex flex-wrap gap-2">
+        <div className="mt-auto flex flex-wrap gap-2 [&_button]:touch-manipulation">
           {canManage && (
             <>
               {!shift.isPublished && (

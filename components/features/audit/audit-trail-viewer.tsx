@@ -199,7 +199,7 @@ export function AuditTrailViewer() {
               value={locationId || "all"}
               onValueChange={(v) => setLocationId(v === "all" ? "" : v)}
             >
-              <SelectTrigger id="location" className="w-[200px]">
+              <SelectTrigger id="location" className="w-full min-w-0 sm:w-[200px]">
                 <SelectValue placeholder="All locations" />
               </SelectTrigger>
               <SelectContent>
@@ -219,7 +219,7 @@ export function AuditTrailViewer() {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-[160px]"
+              className="w-full min-w-0 sm:w-[160px]"
             />
           </div>
           <div className="space-y-2">
@@ -229,7 +229,7 @@ export function AuditTrailViewer() {
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-[160px]"
+              className="w-full min-w-0 sm:w-[160px]"
             />
           </div>
           <Button variant="outline" size="sm" onClick={handleExport}>
@@ -253,6 +253,7 @@ export function AuditTrailViewer() {
               No audit entries for the selected filters.
             </p>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -312,6 +313,7 @@ export function AuditTrailViewer() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -406,17 +406,17 @@ export function ShiftsManager() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Shifts</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Shifts</h1>
           <p className="text-muted-foreground mt-0.5 text-sm">
             {canManage
               ? "Create shifts and assign staff. Violations are shown when assigning."
               : "View your shifts. Request swaps, offer shifts up, or pick up available shifts."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <WeekNavigator
             monday={monday}
             sunday={sunday}
@@ -427,7 +427,7 @@ export function ShiftsManager() {
           {canManage && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => setCreateModalOpen(true)}>
+                <Button onClick={() => setCreateModalOpen(true)} className="min-h-[44px] touch-manipulation sm:min-h-9">
                   <Plus className="size-4" />
                   Create shift
                 </Button>

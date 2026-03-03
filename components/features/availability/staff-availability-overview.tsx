@@ -54,7 +54,9 @@ export function StaffAvailabilityOverview() {
 
   if (isLoading) {
     return (
-      <p className="text-muted-foreground text-sm">Loading staff availability…</p>
+      <p className="text-muted-foreground text-sm">
+        Loading staff availability…
+      </p>
     );
   }
 
@@ -62,9 +64,7 @@ export function StaffAvailabilityOverview() {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground text-sm">
-            No staff found.
-          </p>
+          <p className="text-muted-foreground text-sm">No staff found.</p>
         </CardContent>
       </Card>
     );
@@ -96,7 +96,7 @@ export function StaffAvailabilityOverview() {
                 <div className="flex flex-wrap items-center gap-2">
                   <CardTitle className="text-lg">{s.name}</CardTitle>
                   {s.role === "MANAGER" && (
-                    <Badge variant="secondary" className="w-fit">
+                    <Badge role="manager" className="w-fit">
                       Manager
                     </Badge>
                   )}
@@ -116,42 +116,49 @@ export function StaffAvailabilityOverview() {
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {Object.entries(byLocation).map(([locationId, locWindows]) => {
-                      const loc = locWindows[0]?.location;
-                      return (
-                        <div key={locationId}>
-                          <p className="text-muted-foreground mb-2 text-sm font-medium">
-                            {loc?.name ?? "Unknown"} ({loc?.timezone})
-                          </p>
-                          <ul className="space-y-2">
-                            {locWindows
-                              .filter((w) => w.isRecurring && w.dayOfWeek != null)
-                              .sort((a, b) => (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0))
-                              .map((w) => (
-                                <li
-                                  key={w.id}
-                                  className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2"
-                                >
-                                  <Badge variant="secondary">
-                                    {DAY_NAMES[w.dayOfWeek ?? 0]}
-                                  </Badge>
-                                  <span className="text-sm">
-                                    {formatTimeLocal(
-                                      w.startsAt,
-                                      w.location.timezone
-                                    )}{" "}
-                                    –{" "}
-                                    {formatTimeLocal(
-                                      w.endsAt,
-                                      w.location.timezone
-                                    )}
-                                  </span>
-                                </li>
-                              ))}
-                          </ul>
-                        </div>
-                      );
-                    })}
+                    {Object.entries(byLocation).map(
+                      ([locationId, locWindows]) => {
+                        const loc = locWindows[0]?.location;
+                        return (
+                          <div key={locationId}>
+                            <p className="text-muted-foreground mb-2 text-sm font-medium">
+                              {loc?.name ?? "Unknown"} ({loc?.timezone})
+                            </p>
+                            <ul className="space-y-2">
+                              {locWindows
+                                .filter(
+                                  (w) => w.isRecurring && w.dayOfWeek != null,
+                                )
+                                .sort(
+                                  (a, b) =>
+                                    (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0),
+                                )
+                                .map((w) => (
+                                  <li
+                                    key={w.id}
+                                    className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2"
+                                  >
+                                    <Badge tag="day">
+                                      {DAY_NAMES[w.dayOfWeek ?? 0]}
+                                    </Badge>
+                                    <span className="text-sm">
+                                      {formatTimeLocal(
+                                        w.startsAt,
+                                        w.location.timezone,
+                                      )}{" "}
+                                      –{" "}
+                                      {formatTimeLocal(
+                                        w.endsAt,
+                                        w.location.timezone,
+                                      )}
+                                    </span>
+                                  </li>
+                                ))}
+                            </ul>
+                          </div>
+                        );
+                      },
+                    )}
                   </div>
                 )}
               </CardContent>

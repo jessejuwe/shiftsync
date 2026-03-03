@@ -49,6 +49,7 @@ const badgeVariants = cva(
           "bg-emerald-100 text-emerald-700 border border-emerald-200 font-normal dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/20",
         location:
           "bg-indigo-100 text-indigo-700 border border-indigo-200 font-normal dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/20",
+        day: "bg-cyan-100 text-cyan-700 border border-cyan-200 font-normal dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30",
       },
 
       role: {

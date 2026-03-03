@@ -273,29 +273,25 @@ export function StaffSelectModal({
                         {s.skills
                           .filter((sk) => requiredSkillIds.includes(sk.id))
                           .map((sk) => (
-                            <Badge
-                              key={sk.id}
-                              variant="secondary"
-                              className="text-xs"
-                            >
+                            <Badge key={sk.id} tag="skill" className="text-xs">
                               {sk.name}
                             </Badge>
                           ))}
                       </div>
                     </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAssignClick(s.id)}
-                        disabled={!shiftId || assignMutation.isPending}
-                        className="ml-4 shrink-0"
-                      >
-                        {assignMutation.isPending &&
-                        assignMutation.variables?.userId === s.id
-                          ? "Assigning…"
-                          : "Assign"}
-                      </Button>
-                    </div>
-                  ))}
+                    <Button
+                      size="sm"
+                      onClick={() => handleAssignClick(s.id)}
+                      disabled={!shiftId || assignMutation.isPending}
+                      className="ml-4 shrink-0"
+                    >
+                      {assignMutation.isPending &&
+                      assignMutation.variables?.userId === s.id
+                        ? "Assigning…"
+                        : "Assign"}
+                    </Button>
+                  </div>
+                ))}
                 {staff.length === 0 && (
                   <p className="text-muted-foreground py-8 text-center text-sm">
                     No staff available for this location.
