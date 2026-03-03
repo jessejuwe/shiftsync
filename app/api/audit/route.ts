@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (shiftId) {
-    where.OR = [
+    const shiftOrConditions = [
       { entityType: "Shift", entityId: shiftId },
       {
         entityType: "ShiftAssignment",
@@ -62,6 +62,11 @@ export async function GET(request: NextRequest) {
         },
       },
     ];
+    // When locationId is also set, include it in each OR branch so the shift filter is scoped to the selected location
+    where.OR =
+      locationId != null
+        ? shiftOrConditions.map((c) => ({ ...c, locationId }))
+        : shiftOrConditions;
   }
 
   const logs = await prisma.auditLog.findMany({

@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AuditLogAction } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  broadcastAssignmentConflict,
-  broadcastShiftAssigned,
-} from "@/lib/pusher-events";
+import { broadcastShiftAssigned } from "@/lib/pusher-events";
 import {
   validateShiftAssignment,
   type PolicyShift,
@@ -541,7 +538,7 @@ export async function POST(request: NextRequest) {
     }, { timeout: 10000 });
 
     if (!result.success) {
-      const { code, message, details, conflictPayload } = result.error;
+      const { code, message, details } = result.error;
       const status =
         code === NOT_FOUND
           ? 404
@@ -550,18 +547,8 @@ export async function POST(request: NextRequest) {
             : code === NOT_PUBLISHED || code === "HEADCOUNT_EXCEEDED"
               ? 400
               : 422;
-      if (conflictPayload) {
-        void broadcastAssignmentConflict(conflictPayload.userId, {
-          shiftId: conflictPayload.shiftId,
-          userId: conflictPayload.userId,
-          conflictType: conflictPayload.conflictType as
-            | "double-booking"
-            | "rest-period"
-            | "availability"
-            | "overtime",
-          message: conflictPayload.message,
-        });
-      }
+      // Do not broadcast assignment conflict to staff - they did not perform the action.
+      // The assigner (admin/manager) receives the error via the API response and toast in the modal.
       return NextResponse.json(
         { code, message, ...(details && { details }) },
         { status }

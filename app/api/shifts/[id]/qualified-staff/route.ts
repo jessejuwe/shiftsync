@@ -27,6 +27,7 @@ export async function GET(
     include: {
       location: { select: { id: true, name: true, timezone: true } },
       requiredSkills: { select: { skillId: true } },
+      assignments: { select: { userId: true } },
     },
   });
 
@@ -38,8 +39,9 @@ export async function GET(
   }
 
   const requiredSkillIds = shift.requiredSkills.map((s) => s.skillId);
+  const assignedUserIds = new Set(shift.assignments.map((a) => a.userId));
 
-  // Staff with valid cert for location (show all; assign API enforces skills, availability, conflicts)
+  // Staff with valid cert for location (exclude already assigned; assign API enforces skills, availability, conflicts)
   const certUsers = await prisma.certification.findMany({
     where: {
       locationId: shift.locationId,
@@ -67,6 +69,8 @@ export async function GET(
   }[] = [];
 
   for (const [userId, user] of certUserMap) {
+    if (assignedUserIds.has(userId)) continue;
+
     const staffSkills = await prisma.staffSkill.findMany({
       where: { userId },
       include: { skill: { select: { id: true, name: true } } },

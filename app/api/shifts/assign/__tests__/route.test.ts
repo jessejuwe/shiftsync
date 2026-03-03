@@ -10,7 +10,6 @@ import { prisma } from "@/lib/prisma";
 jest.mock("@/lib/auth", () => ({ auth: jest.fn() }));
 jest.mock("@/lib/prisma");
 jest.mock("@/lib/pusher-events", () => ({
-  broadcastAssignmentConflict: jest.fn(),
   broadcastShiftAssigned: jest.fn(),
 }));
 jest.mock("@/lib/email-simulator", () => ({
