@@ -74,6 +74,7 @@ describe("GET /api/shifts/[id]/qualified-staff", () => {
       locationId: "loc1",
       location: { id: "loc1", name: "Downtown", timezone: "America/New_York" },
       requiredSkills: [],
+      assignments: [],
     });
     (prisma.certification.findMany as jest.Mock).mockResolvedValue([]);
     (prisma.staffSkill.findMany as jest.Mock).mockResolvedValue([]);
@@ -88,5 +89,45 @@ describe("GET /api/shifts/[id]/qualified-staff", () => {
 
     expect(res.status).toBe(200);
     expect(body.staff).toBeDefined();
+  });
+
+  it("excludes staff already assigned to the shift", async () => {
+    (auth as jest.Mock).mockResolvedValue({
+      user: { id: "m1", role: "MANAGER" },
+    });
+    (prisma.shift.findUnique as jest.Mock).mockResolvedValue({
+      id: "s1",
+      locationId: "loc1",
+      location: { id: "loc1", name: "Downtown", timezone: "America/New_York" },
+      requiredSkills: [],
+      assignments: [{ userId: "u1" }],
+    });
+    (prisma.certification.findMany as jest.Mock).mockResolvedValue([
+      {
+        userId: "u1",
+        locationId: "loc1",
+        expiresAt: new Date("2026-12-31"),
+        user: { id: "u1", name: "Alice", email: "a@x.com" },
+      },
+      {
+        userId: "u2",
+        locationId: "loc1",
+        expiresAt: new Date("2026-12-31"),
+        user: { id: "u2", name: "Bob", email: "b@x.com" },
+      },
+    ]);
+    (prisma.staffSkill.findMany as jest.Mock).mockResolvedValue([]);
+
+    const req = new NextRequest(
+      "http://localhost/api/shifts/s1/qualified-staff"
+    );
+    const res = await GET(req, {
+      params: Promise.resolve({ id: "s1" }),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.staff).toHaveLength(1);
+    expect(body.staff[0].id).toBe("u2");
   });
 });
