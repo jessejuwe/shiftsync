@@ -1,0 +1,18 @@
+-- CreateEnum
+CREATE TYPE "AuditLogAction" AS ENUM (
+  'SHIFT_CREATED',
+  'SHIFT_EDITED',
+  'SHIFT_PUBLISHED',
+  'SHIFT_ASSIGNED',
+  'SHIFT_UNASSIGNED',
+  'OVERRIDE_7TH_DAY',
+  'SWAP_REQUEST',
+  'SWAP_ACCEPT',
+  'SWAP_REJECT',
+  'SWAP_APPROVE',
+  'SWAP_CANCEL',
+  'SWAP_EXECUTE'
+);
+
+-- AlterTable
+ALTER TABLE "audit_logs" ALTER COLUMN "action" TYPE "AuditLogAction" USING "action"::"AuditLogAction";

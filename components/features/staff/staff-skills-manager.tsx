@@ -154,9 +154,9 @@ export function StaffManager() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Staff</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="min-w-0">
+        <h1 className="text-xl font-semibold sm:text-2xl">Staff</h1>
         <p className="text-muted-foreground mt-0.5 text-sm">
           Manage skills and location certifications for each staff member.
           Skills determine shift eligibility; certifications determine which

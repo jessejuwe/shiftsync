@@ -24,7 +24,7 @@ export default async function LoginPage({
   const error = params.error;
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full">
       <CardHeader className="flex flex-col items-center text-center">
         <Image
           src="/assets/logo.png"

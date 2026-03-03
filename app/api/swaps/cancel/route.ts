@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AuditLogAction } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { REQUIRES_MANAGER_APPROVAL } from "@/lib/swap-config";
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
       await tx.auditLog.create({
         data: {
           userId: actorId,
-          action: "SWAP_CANCEL",
+          action: AuditLogAction.SWAP_CANCEL,
           entityType: "SwapRequest",
           entityId: swapRequestId,
           changes: {

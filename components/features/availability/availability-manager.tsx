@@ -444,7 +444,7 @@ function MyAvailabilityForm() {
                           className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2"
                         >
                           <div className="flex items-center gap-2">
-                            <Badge variant="secondary">
+                            <Badge tag="day">
                               {DAY_NAMES[w.dayOfWeek ?? 0]}
                             </Badge>
                             <span className="text-sm">

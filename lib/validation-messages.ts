@@ -6,6 +6,7 @@ export const VALIDATION_LABELS: Record<ValidationCode, string> = {
   SKILL_MISMATCH: "Missing skills",
   CERTIFICATION_REQUIRED: "Location certification",
   AVAILABILITY_VIOLATION: "Outside availability",
+  NO_AVAILABILITY_SET: "No availability set",
   DAILY_HOURS_EXCEEDED: "Daily hours exceeded (>12h)",
   DAILY_HOURS_WARNING: "Daily hours warning (>8h)",
   WEEKLY_HOURS_EXCEEDED: "Weekly hours (overtime)",
@@ -24,6 +25,8 @@ export const STAFF_PICKUP_MESSAGES: Record<ValidationCode, string> = {
     "You're not certified for this location yet. Contact your manager to get certified.",
   AVAILABILITY_VIOLATION:
     "This shift is outside your availability. Update your availability in Settings if your schedule has changed.",
+  NO_AVAILABILITY_SET:
+    "Set your availability in Settings before picking up shifts.",
   DAILY_HOURS_EXCEEDED:
     "This would put you over 12 hours in a single day. Pick a different shift.",
   DAILY_HOURS_WARNING:

@@ -29,6 +29,7 @@ export const PUSHER_EVENTS = {
   ASSIGNMENT_CONFLICT: "assignment-conflict",
   CLOCK_IN: "clock-in",
   CLOCK_OUT: "clock-out",
+  NOTIFICATION_CREATED: "notification-created",
 } as const;
 
 export type PusherEventType = (typeof PUSHER_EVENTS)[keyof typeof PUSHER_EVENTS];
@@ -66,7 +67,7 @@ export interface SwapApprovedPayload {
 export interface AssignmentConflictPayload {
   shiftId: string;
   userId: string;
-  conflictType: "double-booking" | "rest-period" | "overtime";
+  conflictType: "double-booking" | "rest-period" | "availability" | "overtime";
   message?: string;
 }
 
@@ -96,6 +97,11 @@ export interface ClockInOutPayload {
   userId: string;
   locationId: string;
   clockedAt: string; // ISO
+}
+
+export interface NotificationCreatedPayload {
+  notificationType: string;
+  title?: string;
 }
 
 // =============================================================================
@@ -255,4 +261,18 @@ export async function broadcastAssignmentConflict(
   if (!pusher) return;
 
   await pusher.trigger(CHANNELS.user(userId), PUSHER_EVENTS.ASSIGNMENT_CONFLICT, payload);
+}
+
+/**
+ * Emit when a notification is created for a user (e.g. skill added/removed).
+ * Triggers client to refetch notifications and optionally show a toast.
+ */
+export async function broadcastNotificationCreated(
+  userId: string,
+  payload: NotificationCreatedPayload
+): Promise<void> {
+  const pusher = getPusherSafe();
+  if (!pusher) return;
+
+  await pusher.trigger(CHANNELS.user(userId), PUSHER_EVENTS.NOTIFICATION_CREATED, payload);
 }

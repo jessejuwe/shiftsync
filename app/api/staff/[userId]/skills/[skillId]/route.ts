@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { broadcastNotificationCreated } from "@/lib/pusher-events";
 
 /**
  * DELETE /api/staff/[userId]/skills/[skillId]
@@ -53,6 +54,10 @@ export async function DELETE(
         body: `The skill "${existing.skill.name}" has been removed from your profile.`,
         data: { skillId, skillName: existing.skill.name },
       },
+    });
+    void broadcastNotificationCreated(userId, {
+      notificationType: "SKILL_REMOVED",
+      title: "Skill removed",
     });
   }
 

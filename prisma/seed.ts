@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { addDays, subMonths } from "date-fns";
+import { AuditLogAction } from "@/generated/prisma/enums";
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -865,7 +866,7 @@ async function main() {
     create: {
       id: "audit-sample",
       userId: "user-mgr-ny",
-      action: "SHIFT_ASSIGNED",
+      action: AuditLogAction.SHIFT_ASSIGNED,
       entityType: "ShiftAssignment",
       entityId: m1.id,
       locationId: locEast1.id,

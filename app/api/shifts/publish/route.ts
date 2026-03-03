@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AuditLogAction } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { broadcastSchedulePublished } from "@/lib/pusher-events";
@@ -47,12 +48,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await prisma.shift.updateMany({
-    where: {
-      locationId,
-      ...(Array.isArray(shiftIds) ? { id: { in: shiftIds } } : {}),
-    },
-    data: { isPublished: true },
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.shift.updateMany({
+      where: {
+        locationId,
+        ...(Array.isArray(shiftIds) ? { id: { in: shiftIds } } : {}),
+      },
+      data: { isPublished: true },
+    });
+
+    if (session?.user?.id) {
+      await tx.auditLog.create({
+        data: {
+          userId: session.user.id,
+          action: AuditLogAction.SHIFT_PUBLISHED,
+          entityType: "Schedule",
+          entityId: locationId,
+          locationId,
+          changes: {
+            before: { isPublished: false },
+            after: {
+              isPublished: true,
+              shiftCount: result.count,
+              shiftIds: Array.isArray(shiftIds) ? shiftIds : undefined,
+            },
+          },
+        },
+      });
+    }
   });
 
   await broadcastSchedulePublished(locationId, {

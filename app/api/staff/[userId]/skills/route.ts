@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { broadcastNotificationCreated } from "@/lib/pusher-events";
 
 /**
  * GET /api/staff/[userId]/skills
@@ -129,6 +130,11 @@ export async function POST(
       body: `You have been assigned the skill "${skill.name}".`,
       data: { skillId, skillName: skill.name },
     },
+  });
+
+  void broadcastNotificationCreated(userId, {
+    notificationType: "SKILL_ADDED",
+    title: "Skill added",
   });
 
   return NextResponse.json({
