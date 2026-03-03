@@ -80,8 +80,12 @@ const badgeVariants = cva(
       },
 
       role: {
+        admin:
+          "bg-blue-100 text-blue-700 border border-blue-200 font-normal dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/20",
         manager:
-          "bg-purple-100 text-purple-700 border border-purple-200 font-normal dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/20",
+          "bg-green-100 text-green-700 border border-green-200 font-normal dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/20",
+        staff:
+          "bg-gray-100 text-gray-700 border border-gray-200 font-normal dark:bg-gray-500/15 dark:text-gray-300 dark:border-gray-500/20",
       },
     },
 
