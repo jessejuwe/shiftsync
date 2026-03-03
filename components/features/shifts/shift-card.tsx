@@ -88,7 +88,7 @@ export function ShiftCard({
             {isPast && (
               <Badge
                 variant="outline"
-                className="shrink-0 text-muted-foreground"
+                className="shrink-0 border-border bg-muted/50 text-muted-foreground"
               >
                 Past
               </Badge>
@@ -98,7 +98,7 @@ export function ShiftCard({
                 <TooltipTrigger asChild>
                   <Badge
                     status="published"
-                    className="shrink-0 cursor-help bg-success/20 text-success"
+                    className="shrink-0 cursor-help bg-green-100 text-green-800 dark:bg-success/20 dark:text-green-400"
                   >
                     Published
                   </Badge>

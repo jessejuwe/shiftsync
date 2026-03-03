@@ -73,14 +73,13 @@ export function StaffCard({
   const [selectedSkillId, setSelectedSkillId] = useState<string>("");
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const availableSkills = skills.filter(
-    (sk) => !staff.skills.some((us) => us.id === sk.id)
+    (sk) => !staff.skills.some((us) => us.id === sk.id),
   );
   const availableLocations = locations.filter(
     (loc) =>
       !staff.certifications.some(
-        (c) =>
-          c.locationId === loc.id && new Date(c.expiresAt) > new Date()
-      )
+        (c) => c.locationId === loc.id && new Date(c.expiresAt) > new Date(),
+      ),
   );
 
   const handleAddSkill = () => {
@@ -109,7 +108,7 @@ export function StaffCard({
             {staff.role === "MANAGER" && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="secondary" className="mt-1">
+                  <Badge role="manager" className="mt-1">
                     Manager
                   </Badge>
                 </TooltipTrigger>
@@ -119,7 +118,7 @@ export function StaffCard({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {staff.skills.map((sk) => (
-              <Badge key={sk.id} variant="secondary" className="gap-1 pr-1">
+              <Badge key={sk.id} tag="skill" className="gap-1 pr-1">
                 {sk.name}
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -195,11 +194,7 @@ export function StaffCard({
             </TooltipContent>
           </Tooltip>
           {staff.certifications.map((c) => (
-            <Badge
-              key={c.id}
-              variant={isCertExpired(c.expiresAt) ? "outline" : "secondary"}
-              className="gap-1 pr-1"
-            >
+            <Badge key={c.id} tag="location" className="gap-1 pr-1">
               {c.locationName}
               {isCertExpired(c.expiresAt) && (
                 <span className="text-muted-foreground text-xs">(expired)</span>

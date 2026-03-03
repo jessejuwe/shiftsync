@@ -13,42 +13,29 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { getQueryClient } from "@/app/get-query-client";
-import { cn } from "@/lib/utils";
+import { SwapRequestStatus } from "@/generated/prisma/enums";
 
-const SWAP_STATUS_CONFIG: Record<
-  string,
-  { label: string; className: string }
-> = {
-  PENDING: {
+const SWAP_STATUS_CONFIG: Record<SwapRequestStatus, { label: string }> = {
+  [SwapRequestStatus.PENDING]: {
     label: "Pending",
-    className:
-      "border-amber-500/50 bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-500/30",
   },
-  PENDING_MANAGER: {
+  [SwapRequestStatus.PENDING_MANAGER]: {
     label: "Pending Manager",
-    className:
-      "border-blue-500/50 bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-500/30",
   },
-  APPROVED: {
+  [SwapRequestStatus.APPROVED]: {
     label: "Approved",
-    className:
-      "border-green-500/50 bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-200 dark:border-green-500/30",
   },
-  REJECTED: {
+  [SwapRequestStatus.REJECTED]: {
     label: "Declined",
-    className:
-      "border-red-500/50 bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-200 dark:border-red-500/30",
   },
-  CANCELLED: {
+  [SwapRequestStatus.CANCELLED]: {
     label: "Cancelled",
-    className:
-      "border-muted bg-muted text-muted-foreground",
   },
 };
 
 interface SwapRequestItem {
   id: string;
-  status: string;
+  status: SwapRequestStatus;
   message: string | null;
   createdAt: string;
   respondedAt: string | null;
@@ -95,17 +82,14 @@ export function SwapRequestsPanel({ currentUserId }: SwapRequestsPanelProps) {
       swapRequestId: string;
       action: "accept" | "reject";
     }) => {
-      const res = await fetch(
-        `/api/swap-requests/${swapRequestId}/respond`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action,
-            actorId: currentUserId,
-          }),
-        }
-      );
+      const res = await fetch(`/api/swap-requests/${swapRequestId}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          actorId: currentUserId,
+        }),
+      });
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json.message ?? `Failed to ${action} swap`);
@@ -116,9 +100,7 @@ export function SwapRequestsPanel({ currentUserId }: SwapRequestsPanelProps) {
       queryClient.invalidateQueries({ queryKey: ["swap-requests"] });
       queryClient.invalidateQueries({ queryKey: ["shifts"] });
       toast.success(
-        action === "accept"
-          ? "Swap accepted"
-          : "Swap request declined"
+        action === "accept" ? "Swap accepted" : "Swap request declined",
       );
     },
     onError: (err) => {
@@ -128,7 +110,7 @@ export function SwapRequestsPanel({ currentUserId }: SwapRequestsPanelProps) {
 
   const swapRequests: SwapRequestItem[] = data?.swapRequests ?? [];
   const pendingIncoming = swapRequests.filter(
-    (sr) => sr.status === "PENDING" && sr.receiverId === currentUserId
+    (sr) => sr.status === "PENDING" && sr.receiverId === currentUserId,
   );
   const hasPending = pendingIncoming.length > 0;
 
@@ -162,10 +144,7 @@ export function SwapRequestsPanel({ currentUserId }: SwapRequestsPanelProps) {
               const canRespond = isReceiver && isPending;
 
               return (
-                <div
-                  key={sr.id}
-                  className="rounded-lg border p-4 space-y-2"
-                >
+                <div key={sr.id} className="rounded-lg border p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-sm font-medium">
@@ -177,12 +156,12 @@ export function SwapRequestsPanel({ currentUserId }: SwapRequestsPanelProps) {
                         {sr.initiatorShift.shift.location.name} –{" "}
                         {format(
                           new Date(sr.initiatorShift.shift.startsAt),
-                          "MMM d, HH:mm"
+                          "MMM d, HH:mm",
                         )}{" "}
                         –{" "}
                         {format(
                           new Date(sr.initiatorShift.shift.endsAt),
-                          "HH:mm"
+                          "HH:mm",
                         )}
                       </p>
                       {sr.receiverShiftId && (
@@ -196,14 +175,8 @@ export function SwapRequestsPanel({ currentUserId }: SwapRequestsPanelProps) {
                         </p>
                       )}
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        SWAP_STATUS_CONFIG[sr.status]?.className ??
-                          "border-border"
-                      )}
-                    >
-                      {SWAP_STATUS_CONFIG[sr.status]?.label ?? sr.status}
+                    <Badge swap={sr.status}>
+                      {SWAP_STATUS_CONFIG[sr.status].label}
                     </Badge>
                   </div>
                   {canRespond && (
