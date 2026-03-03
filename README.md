@@ -53,6 +53,24 @@ shiftsync/
 
 ---
 
+## Tech Stack
+
+| Category | Tools |
+|----------|-------|
+| **Framework** | Next.js 16 (App Router), React 19 |
+| **Database** | PostgreSQL (Neon), Prisma (ORM, migrations) |
+| **Auth** | NextAuth 5 |
+| **Styling** | Tailwind CSS 4, shadcn/ui (Radix UI) |
+| **Data fetching** | TanStack React Query |
+| **Real-time** | Pusher (server + client) |
+| **Forms & validation** | React Hook Form, Zod |
+| **Charts** | Recharts |
+| **Dates** | date-fns, date-fns-tz |
+| **Testing** | Jest, Testing Library |
+| **Other** | Framer Motion, cmdk, sonner (toasts), Zustand |
+
+---
+
 ## Golden Rules
 
 1. **Fail loudly** – Validation returns typed codes and clear messages; never silent failures.
