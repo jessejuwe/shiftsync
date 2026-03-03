@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   calculateProjectedWeeklyHours,
@@ -33,8 +34,17 @@ function toPolicyAssignment(a: {
 /**
  * GET /api/shifts/assign/preview?shiftId=...&userId=...
  * Returns what-if preview for assigning a user to a shift.
+ * Auth required. Staff can only preview themselves; managers/admins can preview any user.
  */
 export async function GET(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const shiftId = searchParams.get("shiftId");
   const userId = searchParams.get("userId");
@@ -43,6 +53,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { code: "MISSING_FIELDS", message: "shiftId and userId are required" },
       { status: 400 }
+    );
+  }
+
+  const role = (session.user as { role?: string }).role;
+  const canManageOthers = role === "ADMIN" || role === "MANAGER";
+  if (userId !== session.user.id && !canManageOthers) {
+    return NextResponse.json(
+      { code: "FORBIDDEN", message: "You can only preview assignments for yourself" },
+      { status: 403 }
     );
   }
 
