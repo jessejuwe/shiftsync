@@ -7,10 +7,8 @@ import { useSession } from "next-auth/react";
 import { useRealtimeSchedule } from "@/hooks/use-realtime-schedule";
 import { format } from "date-fns";
 import { getWeekRangeISO } from "@/lib/week-utils";
-import { Plus, ChevronLeft, ChevronRight, X, Pencil, ArrowLeftRight, Gift, UserPlus, LogIn, LogOut, Send, EyeOff } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -29,45 +27,11 @@ import { SwapRequestModal } from "./swap-request-modal";
 import { SwapRequestsPanel } from "./swap-requests-panel";
 import { ManagerSwapApprovalsPanel } from "./manager-swap-approvals-panel";
 import { OnDutyDashboard } from "./on-duty-dashboard";
+import { WeekNavigator } from "./week-navigator";
+import { SchedulePublishBar } from "./schedule-publish-bar";
+import { ShiftCard } from "./shift-card";
 import { getQueryClient } from "@/app/get-query-client";
-import {
-  canUnpublishOrEdit,
-  SCHEDULE_CONFIG,
-} from "@/config/schedule";
-
-interface Shift {
-  id: string;
-  locationId: string;
-  location: { id: string; name: string; timezone: string };
-  startsAt: string;
-  endsAt: string;
-  title: string | null;
-  notes: string | null;
-  headcount?: number;
-  isPublished: boolean;
-  requiredSkills: { id: string; name: string }[];
-  assignments: {
-    id: string;
-    userId: string;
-    user: { id: string; name: string; email: string };
-    status: string;
-    clockedInAt: string | null;
-    clockedOutAt: string | null;
-  }[];
-}
-
-interface Location {
-  id: string;
-  name: string;
-  address: string | null;
-  timezone: string;
-}
-
-interface Skill {
-  id: string;
-  name: string;
-  description: string | null;
-}
+import type { Shift, Location, Skill } from "./types";
 
 export function ShiftsManager() {
   const queryClient = getQueryClient();
@@ -453,52 +417,13 @@ export function ShiftsManager() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg border bg-muted/30">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setWeekOffset((o) => o - 1)}
-                  className="h-9 w-9"
-                >
-                  <ChevronLeft className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Previous week</TooltipContent>
-            </Tooltip>
-            <span className="min-w-[140px] px-3 py-1.5 text-center text-sm font-medium">
-              {format(monday, "MMM d")} – {format(sunday, "MMM d")}
-            </span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setWeekOffset((o) => o + 1)}
-                  className="h-9 w-9"
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Next week</TooltipContent>
-            </Tooltip>
-            {weekOffset !== 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setWeekOffset(0)}
-                    className="h-8 text-xs"
-                  >
-                    Today
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Jump to current week</TooltipContent>
-              </Tooltip>
-            )}
-          </div>
+          <WeekNavigator
+            monday={monday}
+            sunday={sunday}
+            weekOffset={weekOffset}
+            onWeekChange={(delta) => setWeekOffset((o) => o + delta)}
+            onJumpToToday={() => setWeekOffset(0)}
+          />
           {canManage && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -514,77 +439,17 @@ export function ShiftsManager() {
       </div>
 
       {canManage && shiftsByLocation.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-3">
-          <span className="text-muted-foreground text-sm font-medium">
-            Schedule:
-          </span>
-          {shiftsByLocation.map(({ location, shifts: locShifts }) => {
-            const unpublished = locShifts.filter((s) => !s.isPublished);
-            const published = locShifts.filter((s) => s.isPublished);
-            const publishedPastCutoff = published.filter(
-              (s) => !canUnpublishOrEdit(new Date(s.startsAt))
-            );
-            const canUnpublish = published.length > 0 && publishedPastCutoff.length === 0;
-
-            return (
-              <div
-                key={location.id}
-                className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5"
-              >
-                <span className="text-sm font-medium">{location.name}</span>
-                {unpublished.length > 0 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() =>
-                          publishMutation.mutate({
-                            locationId: location.id,
-                            shiftIds: unpublished.map((s) => s.id),
-                          })
-                        }
-                        disabled={publishMutation.isPending}
-                      >
-                        <Send className="size-3.5" />
-                        Publish
-                        {unpublished.length < locShifts.length && ` (${unpublished.length})`}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Make schedule visible to staff</TooltipContent>
-                  </Tooltip>
-                )}
-                {published.length > 0 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-block">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            unpublishMutation.mutate({
-                              locationId: location.id,
-                              shiftIds: published.map((s) => s.id),
-                            })
-                          }
-                          disabled={!canUnpublish || unpublishMutation.isPending}
-                        >
-                          <EyeOff className="size-3.5" />
-                          Unpublish
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {canUnpublish
-                        ? "Hide schedule from staff"
-                        : `Unpublish blocked: within ${SCHEDULE_CONFIG.unpublishEditCutoffHours}h of shift start`}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <SchedulePublishBar
+          shiftsByLocation={shiftsByLocation}
+          onPublish={(locationId, shiftIds) =>
+            publishMutation.mutate({ locationId, shiftIds })
+          }
+          onUnpublish={(locationId, shiftIds) =>
+            unpublishMutation.mutate({ locationId, shiftIds })
+          }
+          isPublishPending={publishMutation.isPending}
+          isUnpublishPending={unpublishMutation.isPending}
+        />
       )}
 
       {isStaff && currentUserId && (
@@ -599,276 +464,41 @@ export function ShiftsManager() {
         <p className="text-muted-foreground">Loading shifts...</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {shifts.map((shift) => {
-            const now = new Date();
-            const endsAt = new Date(shift.endsAt);
-            const isPast = endsAt < now;
-            const headcount = shift.headcount ?? 1;
-            const isFull = shift.assignments.length >= headcount;
-            return (
-            <Card
+          {shifts.map((shift) => (
+            <ShiftCard
               key={shift.id}
-              className={`flex flex-col overflow-hidden transition-shadow hover:shadow-md ${
-                isPast ? "opacity-75 bg-muted/30" : ""
-              }`}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-base">
-                      {format(new Date(shift.startsAt), "MMM d, HH:mm")} –{" "}
-                      {format(new Date(shift.endsAt), "HH:mm")}
-                    </CardTitle>
-                    <p className="text-muted-foreground text-sm">
-                      {shift.location.name}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5 justify-end">
-                    {isPast && (
-                      <Badge variant="outline" className="shrink-0 text-muted-foreground">
-                        Past
-                      </Badge>
-                    )}
-                  {shift.isPublished ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge variant="default" className="shrink-0 cursor-help">
-                          Published
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>Visible to staff</TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge variant="secondary" className="shrink-0 cursor-help">
-                          Draft
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>Not yet visible to staff</TooltipContent>
-                    </Tooltip>
-                  )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col gap-3">
-                <div className="flex flex-1 flex-col gap-3">
-                  {shift.requiredSkills.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {shift.requiredSkills.map((s) => (
-                        <Badge key={s.id} variant="secondary">
-                          {s.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {(headcount > 1 || shift.assignments.length > 0) && (
-                    <div className="flex flex-wrap items-center gap-1.5 text-sm">
-                      <span className="text-muted-foreground shrink-0">
-                        Assigned: {shift.assignments.length}/{headcount}
-                      </span>
-                      {shift.assignments.map((a) => (
-                        <span
-                          key={a.id}
-                          className="inline-flex items-center gap-0.5 rounded-md bg-muted px-2 py-0.5"
-                        >
-                          {a.user.name}
-                          {canManage && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  onClick={() => unassignMutation.mutate(a.id)}
-                                  disabled={unassignMutation.isPending}
-                                  className="ml-0.5 rounded p-0.5 hover:bg-destructive/20 hover:text-destructive disabled:opacity-50"
-                                  aria-label={`Unassign ${a.user.name}`}
-                                >
-                                  <X className="size-3" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>Unassign {a.user.name}</TooltipContent>
-                            </Tooltip>
-                          )}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-auto flex flex-wrap gap-2">
-                  {canManage && (
-                    <>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-block">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setEditModalShift(shift)}
-                              disabled={!canUnpublishOrEdit(new Date(shift.startsAt))}
-                            >
-                              <Pencil className="size-3.5" />
-                              Edit
-                            </Button>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {canUnpublishOrEdit(new Date(shift.startsAt))
-                            ? "Edit shift time, title, or required skills"
-                            : "Cannot edit within 48 hours of shift start"}
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-block">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                setStaffModalShift({
-                                  id: shift.id,
-                                  locationId: shift.locationId,
-                                  requiredSkillIds: shift.requiredSkills.map((s) => s.id),
-                                  requiredSkills: shift.requiredSkills,
-                                })
-                              }
-                              disabled={isFull}
-                            >
-                              Assign staff
-                            </Button>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isFull ? "Shift is full" : "Assign staff to this shift"}
-                        </TooltipContent>
-                      </Tooltip>
-                    </>
-                  )}
-                  {isStaff && currentUserId && (
-                    <>
-                      {shift.assignments.some((a) => a.userId === currentUserId) && (
-                        <>
-                          {(() => {
-                            const myAssignment = shift.assignments.find((a) => a.userId === currentUserId)!;
-                            const now = new Date();
-                            const startsAt = new Date(shift.startsAt);
-                            const endsAt = new Date(shift.endsAt);
-                            const windowStart = new Date(startsAt);
-                            windowStart.setMinutes(windowStart.getMinutes() - 15);
-                            const canClockIn =
-                              !isPast &&
-                              shift.isPublished &&
-                              !myAssignment.clockedInAt &&
-                              !myAssignment.clockedOutAt &&
-                              now >= windowStart &&
-                              now <= endsAt;
-                            const canClockOut =
-                              !isPast &&
-                              !!myAssignment.clockedInAt &&
-                              !myAssignment.clockedOutAt;
-                            return (
-                              <>
-                                {canClockIn && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="sm"
-                                        variant="default"
-                                        onClick={() => clockInMutation.mutate(myAssignment.id)}
-                                        disabled={clockInMutation.isPending}
-                                      >
-                                        <LogIn className="size-3.5" />
-                                        Clock in
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Clock in to this shift</TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {canClockOut && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => clockOutMutation.mutate(myAssignment.id)}
-                                        disabled={clockOutMutation.isPending}
-                                      >
-                                        <LogOut className="size-3.5" />
-                                        Clock out
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Clock out from this shift</TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </>
-                            );
-                          })()}
-                          {!isPast && (
-                            <>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      const a = shift.assignments.find((x) => x.userId === currentUserId)!;
-                                      setSwapModalAssignment({ ...a, shiftId: shift.id });
-                                    }}
-                                  >
-                                    <ArrowLeftRight className="size-3.5" />
-                                    Request swap
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Request swap with another staff member</TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => unassignMutation.mutate(shift.assignments.find((a) => a.userId === currentUserId)!.id)}
-                                    disabled={unassignMutation.isPending}
-                                  >
-                                    <Gift className="size-3.5" />
-                                    Offer up
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Offer this shift to another staff member</TooltipContent>
-                              </Tooltip>
-                            </>
-                          )}
-                        </>
-                      )}
-                      {!shift.assignments.some((a) => a.userId === currentUserId) && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="inline-block">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setPickupModalShift(shift)}
-                                disabled={isPast || isFull}
-                              >
-                                <UserPlus className="size-3.5" />
-                                Pick up
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {isPast
-                              ? "This shift has ended"
-                              : isFull
-                                ? "This shift is full"
-                                : "Pick up this available shift"}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-          })}
+              shift={shift}
+              canManage={canManage}
+              isStaff={isStaff}
+              currentUserId={currentUserId}
+              actions={{
+                onEdit: setEditModalShift,
+                onAssignStaff: () =>
+                  setStaffModalShift({
+                    id: shift.id,
+                    locationId: shift.locationId,
+                    requiredSkillIds: shift.requiredSkills.map((s) => s.id),
+                    requiredSkills: shift.requiredSkills,
+                  }),
+                onUnassign: (id) => unassignMutation.mutate(id),
+                onPublish: (locationId, shiftIds) =>
+                  publishMutation.mutate({ locationId, shiftIds }),
+                onUnpublish: (locationId, shiftIds) =>
+                  unpublishMutation.mutate({ locationId, shiftIds }),
+                onClockIn: (id) => clockInMutation.mutate(id),
+                onClockOut: (id) => clockOutMutation.mutate(id),
+                onRequestSwap: (assignmentId, _userId, user, shiftId) =>
+                  setSwapModalAssignment({ id: assignmentId, userId: user.id, user, shiftId }),
+                onOfferUp: (assignmentId) => unassignMutation.mutate(assignmentId),
+                onPickup: setPickupModalShift,
+                isUnassignPending: unassignMutation.isPending,
+                isPublishPending: publishMutation.isPending,
+                isUnpublishPending: unpublishMutation.isPending,
+                isClockInPending: clockInMutation.isPending,
+                isClockOutPending: clockOutMutation.isPending,
+              }}
+            />
+          ))}
           {shifts.length === 0 && (
             <p className="text-muted-foreground col-span-full py-8 text-center">
               {canManage

@@ -105,11 +105,13 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      // 2. Fetch shift with required skills
+      // 2. Fetch shift with required skills and names (for validation messages)
       const shift = await tx.shift.findUnique({
         where: { id: shiftId },
         include: {
-          requiredSkills: { select: { skillId: true } },
+          requiredSkills: {
+            select: { skillId: true, skill: { select: { name: true } } },
+          },
         },
       });
 
@@ -138,6 +140,7 @@ export async function POST(request: NextRequest) {
 
       // 3. Re-fetch all constraint data inside transaction (fresh read after lock)
       const [
+        assigningUser,
         userAssignments,
         userSkills,
         userCerts,
@@ -145,6 +148,10 @@ export async function POST(request: NextRequest) {
         allStaffSkills,
         allCertsForLocation,
       ] = await Promise.all([
+        tx.user.findUnique({
+          where: { id: userId },
+          select: { name: true },
+        }),
         tx.shiftAssignment.findMany({
           where: { userId },
           include: { shift: { select: { startsAt: true, endsAt: true } } },
@@ -220,6 +227,10 @@ export async function POST(request: NextRequest) {
         startsAt: shift.startsAt,
         endsAt: shift.endsAt,
         requiredSkillIds: shift.requiredSkills.map((s) => s.skillId),
+        requiredSkillNames: shift.requiredSkills.map((s) => ({
+          id: s.skillId,
+          name: s.skill.name,
+        })),
       };
 
       const policyAssignments = userAssignments.map(toPolicyAssignment);
@@ -388,6 +399,7 @@ export async function POST(request: NextRequest) {
       const validation = validateShiftAssignment({
         shift: policyShift,
         userId,
+        userName: assigningUser?.name ?? undefined,
         userSkillIds,
         userCertifications: policyCerts,
         userAvailabilityWindows: policyWindows,

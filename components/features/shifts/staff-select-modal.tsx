@@ -44,7 +44,6 @@ interface StaffMember {
     locationName: string;
     expiresAt: string;
   }[];
-  hasRequiredSkills?: boolean;
 }
 
 interface StaffSelectModalProps {
@@ -260,65 +259,30 @@ export function StaffSelectModal({
               </p>
             ) : (
               <div className="space-y-2">
-                {staff.map((s) => {
-                  const hasAllSkills =
-                    s.hasRequiredSkills ??
-                    (requiredSkillIds.length === 0 ||
-                      requiredSkillIds.every((rid) =>
-                        s.skills.some((sk) => sk.id === rid),
-                      ));
-                  return (
-                    <div
-                      key={s.id}
-                      className={`flex items-center justify-between rounded-xl border p-4 transition-colors hover:bg-muted/50 ${
-                        hasAllSkills
-                          ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20"
-                          : "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20"
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">{s.name}</p>
-                        <p className="text-muted-foreground truncate text-sm">
-                          {s.email}
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-1">
-                          {!hasAllSkills && requiredSkills.length > 0 ? (
-                            <>
-                              <Badge
-                                variant="outline"
-                                className="border-amber-500/50 text-amber-700 dark:text-amber-400"
-                              >
-                                Missing required skill
-                              </Badge>
-                              {requiredSkills
-                                .filter(
-                                  (rs) =>
-                                    !s.skills.some((sk) => sk.id === rs.id),
-                                )
-                                .map((rs) => (
-                                  <span
-                                    key={rs.id}
-                                    className="text-muted-foreground rounded-md bg-muted px-2 py-0.5 text-xs font-medium"
-                                  >
-                                    {rs.name}
-                                  </span>
-                                ))}
-                            </>
-                          ) : (
-                            s.skills
-                              .filter((sk) => requiredSkillIds.includes(sk.id))
-                              .map((sk) => (
-                                <Badge
-                                  key={sk.id}
-                                  variant="secondary"
-                                  className="text-xs"
-                                >
-                                  {sk.name}
-                                </Badge>
-                              ))
-                          )}
-                        </div>
+                {staff.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-4 transition-colors hover:bg-muted/50 dark:bg-muted/20"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{s.name}</p>
+                      <p className="text-muted-foreground truncate text-sm">
+                        {s.email}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-1">
+                        {s.skills
+                          .filter((sk) => requiredSkillIds.includes(sk.id))
+                          .map((sk) => (
+                            <Badge
+                              key={sk.id}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {sk.name}
+                            </Badge>
+                          ))}
                       </div>
+                    </div>
                       <Button
                         size="sm"
                         onClick={() => handleAssignClick(s.id)}
@@ -331,8 +295,7 @@ export function StaffSelectModal({
                           : "Assign"}
                       </Button>
                     </div>
-                  );
-                })}
+                  ))}
                 {staff.length === 0 && (
                   <p className="text-muted-foreground py-8 text-center text-sm">
                     No staff available for this location.

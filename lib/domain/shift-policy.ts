@@ -43,6 +43,8 @@ export interface PolicyShift extends TimeRange {
   id: string;
   locationId: string;
   requiredSkillIds: string[];
+  /** Optional skill names for user-facing messages (e.g. "missing kitchen skill") */
+  requiredSkillNames?: Array<{ id: string; name: string }>;
 }
 
 export interface PolicyAssignment extends TimeRange {
@@ -161,26 +163,54 @@ export function checkRestPeriod(
   };
 }
 
+function formatMissingSkillsMessage(
+  missingNames: string[],
+  userName: string = "User"
+): string {
+  if (missingNames.length === 0)
+    return `${userName} is missing required skills for this shift.`;
+  if (missingNames.length === 1)
+    return `${userName} is missing ${missingNames[0]} skill for this shift.`;
+  if (missingNames.length === 2)
+    return `${userName} is missing ${missingNames[0]} and ${missingNames[1]} skills for this shift.`;
+  const rest = missingNames.slice(0, -1).join(", ");
+  const last = missingNames[missingNames.length - 1];
+  return `${userName} is missing ${rest}, and ${last} skills for this shift.`;
+}
+
 /**
  * Check if the user has all required skills for the shift.
  */
 export function checkSkillMatch(
   shift: PolicyShift,
   userSkillIds: string[],
-  allUsersWithSkills: Array<PolicyUser & { skillIds: string[] }>
+  allUsersWithSkills: Array<PolicyUser & { skillIds: string[] }>,
+  userName?: string
 ): ValidationResult | null {
-  const missing = shift.requiredSkillIds.filter((id) => !userSkillIds.includes(id));
+  const missingIds = shift.requiredSkillIds.filter(
+    (id) => !userSkillIds.includes(id)
+  );
 
-  if (missing.length === 0) return null;
+  if (missingIds.length === 0) return null;
+
+  const missingNames = shift.requiredSkillNames
+    ?.filter((s) => missingIds.includes(s.id))
+    .map((s) => s.name);
 
   const qualified = allUsersWithSkills.filter((u) =>
     shift.requiredSkillIds.every((sid) => u.skillIds.includes(sid))
   );
 
+  const displayName = userName ?? "User";
+  const message =
+    missingNames && missingNames.length === missingIds.length
+      ? formatMissingSkillsMessage(missingNames, displayName)
+      : `${displayName} is missing ${missingIds.length} required skill(s) for this shift.`;
+
   return {
     type: "block",
     code: "SKILL_MISMATCH",
-    message: `User is missing ${missing.length} required skill(s) for this shift.`,
+    message,
     suggestions: qualified.map((u) => ({ id: u.id, name: u.name, email: u.email })),
   };
 }
@@ -503,6 +533,8 @@ export function checkConsecutiveDays(
 export interface ValidateShiftAssignmentInput {
   shift: PolicyShift;
   userId: string;
+  /** User's display name for validation messages (e.g. "John is missing Kitchen skill") */
+  userName?: string;
   userSkillIds: string[];
   userCertifications: PolicyCertification[];
   userAvailabilityWindows: PolicyAvailabilityWindow[];
@@ -532,6 +564,7 @@ export function validateShiftAssignment(
 ): ValidateShiftAssignmentOutput {
   const {
     shift,
+    userName,
     userSkillIds,
     userCertifications,
     userAvailabilityWindows,
@@ -568,7 +601,8 @@ export function validateShiftAssignment(
   const skillMatch = checkSkillMatch(
     shift,
     userSkillIds,
-    allUsersWithSkills
+    allUsersWithSkills,
+    userName
   );
   if (skillMatch) blocks.push(skillMatch);
 

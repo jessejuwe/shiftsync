@@ -31,16 +31,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--success-bg": "var(--success)",
-          "--success-text": "var(--primary-foreground)",
+          "--success-text": "var(--success-foreground)",
           "--success-border": "var(--border)",
           "--info-bg": "var(--info)",
-          "--info-text": "var(--primary-foreground)",
+          "--info-text": "var(--info-foreground)",
           "--info-border": "var(--border)",
           "--error-bg": "var(--destructive)",
-          "--error-text": "var(--primary-foreground)",
+          "--error-text": "var(--destructive-foreground)",
           "--error-border": "var(--border)",
           "--warning-bg": "var(--warning)",
-          "--warning-text": "var(--primary-foreground)",
+          "--warning-text": "var(--warning-foreground)",
           "--warning-border": "var(--border)",
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
@@ -48,12 +48,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           success:
-            "!bg-success !text-primary-foreground [&_svg]:!text-primary-foreground [&_*]:!text-primary-foreground",
+            "!bg-success !text-success-foreground [&_svg]:!text-success-foreground [&_*]:!text-success-foreground",
           error:
-            "!bg-destructive !text-primary-foreground [&_svg]:!text-primary-foreground [&_*]:!text-primary-foreground",
+            "!bg-destructive !text-destructive-foreground [&_svg]:!text-destructive-foreground [&_*]:!text-destructive-foreground",
           warning:
-            "!bg-warning !text-primary-foreground [&_svg]:!text-primary-foreground [&_*]:!text-primary-foreground",
-          info: "!bg-info !text-primary-foreground [&_svg]:!text-primary-foreground [&_*]:!text-primary-foreground",
+            "!bg-warning !text-warning-foreground [&_svg]:!text-warning-foreground [&_*]:!text-warning-foreground",
+          info: "!bg-info !text-info-foreground [&_svg]:!text-info-foreground [&_*]:!text-info-foreground",
         },
       }}
       {...props}
