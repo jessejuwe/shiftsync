@@ -28,6 +28,11 @@ export async function DELETE(
 
   const { userId, skillId } = await params;
 
+  const existing = await prisma.staffSkill.findUnique({
+    where: { userId_skillId: { userId, skillId } },
+    include: { skill: { select: { id: true, name: true } } },
+  });
+
   const deleted = await prisma.staffSkill.deleteMany({
     where: { userId, skillId },
   });
@@ -37,6 +42,18 @@ export async function DELETE(
       { code: "NOT_FOUND", message: "Skill assignment not found" },
       { status: 404 }
     );
+  }
+
+  if (existing?.skill) {
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: "SKILL_REMOVED",
+        title: "Skill removed",
+        body: `The skill "${existing.skill.name}" has been removed from your profile.`,
+        data: { skillId, skillName: existing.skill.name },
+      },
+    });
   }
 
   return NextResponse.json({ success: true });

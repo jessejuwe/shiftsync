@@ -1,4 +1,5 @@
 import { NotificationPreferencesForm } from "@/components/features/settings/notification-preferences-form";
+import { MySkillsCard } from "@/components/features/settings/my-skills-card";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function SettingsPage() {
           Configure your notification preferences and other account settings.
         </p>
       </div>
+      <MySkillsCard />
       <NotificationPreferencesForm />
     </div>
   );

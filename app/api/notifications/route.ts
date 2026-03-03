@@ -23,17 +23,16 @@ export async function GET(request: NextRequest) {
     ...(unreadOnly && { readAt: null }),
   };
 
-  const notifications = await prisma.notification.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
-
-  const unreadCount = unreadOnly
-    ? notifications.length
-    : await prisma.notification.count({
-        where: { userId: session.user.id, readAt: null },
-      });
+  const [notifications, unreadCount] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+    prisma.notification.count({
+      where: { userId: session.user.id, readAt: null },
+    }),
+  ]);
 
   return NextResponse.json({
     notifications: notifications.map((n) => ({
