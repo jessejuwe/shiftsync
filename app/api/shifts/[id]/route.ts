@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { NotificationType } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { broadcastShiftEdited } from "@/lib/pusher-events";
@@ -365,6 +366,25 @@ export async function PATCH(
               where: { id: swap.id },
               data: { status: toPrismaStatus(transitionResult.newState) },
             });
+            for (const n of transitionResult.notifications) {
+              const userId =
+                n.target === "initiator"
+                  ? swap.initiatorId
+                  : n.target === "receiver"
+                    ? swap.receiverId
+                    : null;
+              if (userId) {
+                await tx.notification.create({
+                  data: {
+                    userId,
+                    type: n.type as NotificationType,
+                    title: n.title,
+                    body: n.body ?? null,
+                    data: (n.data ?? {}) as object,
+                  },
+                });
+              }
+            }
           }
         }
       }

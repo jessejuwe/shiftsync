@@ -73,16 +73,16 @@ export async function PATCH(
     const [startH, startM] = body.startTime.split(":").map(Number);
     const [endH, endM] = body.endTime.split(":").map(Number);
 
-    const refDate = new Date(2024, 0, 1, 0, 0, 0);
     const dayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    refDate.setDate(refDate.getDate() + dayOffset);
-    const localStart = new Date(refDate);
-    localStart.setHours(startH, startM, 0, 0);
-    const localEnd = new Date(refDate);
-    localEnd.setHours(endH > startH ? endH : endH + 24, endM, 0, 0);
+    const refDay = 1 + dayOffset;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dateStrStart = `2024-01-${pad(refDay)}T${pad(startH)}:${pad(startM)}:00`;
+    const overnight = endH <= startH;
+    const endDay = overnight ? refDay + 1 : refDay;
+    const dateStrEnd = `2024-01-${pad(endDay)}T${pad(endH)}:${pad(endM)}:00`;
 
-    updateData.startsAt = fromZonedTime(localStart, timezone);
-    updateData.endsAt = fromZonedTime(localEnd, timezone);
+    updateData.startsAt = fromZonedTime(dateStrStart, timezone);
+    updateData.endsAt = fromZonedTime(dateStrEnd, timezone);
     if (updateData.endsAt <= updateData.startsAt) {
       updateData.endsAt = new Date(
         updateData.endsAt.getTime() + 24 * 60 * 60 * 1000
