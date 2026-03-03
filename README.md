@@ -4,6 +4,9 @@ Shift scheduling and management for multi-location teams. Next.js fullstack app 
 
 ## Getting Started
 
+1. Copy `.env.example` to `.env` and set `DATABASE_URL` and `AUTH_SECRET` (or `NEXTAUTH_SECRET`).
+2. Run:
+
 ```bash
 npm install
 npx prisma generate
@@ -30,20 +33,20 @@ All seeded users share `password123`.
 shiftsync/
 ├── app/
 │   ├── (auth)/                   # Login, register
-│   ├── (dashboard)/              # Protected routes (dashboard, shifts, audit)
-│   └── api/                      # REST API (shifts, staff, locations, overtime, fairness, audit, etc.)
+│   ├── (dashboard)/              # Protected routes (dashboard, shifts, availability, staff, audit, settings)
+│   └── api/                      # REST API (shifts, swaps, swap-requests, availability, staff, overtime, fairness, audit, etc.)
 ├── components/
 │   ├── ui/                       # shadcn/ui
-│   └── features/                 # shifts, overtime, fairness, audit
+│   └── features/                 # shifts, overtime, fairness, audit, availability, notifications
 ├── lib/
 │   ├── auth.ts                   # NextAuth
-│   ├── domain/                   # Pure domain logic (fairness, overtime, shift-policy)
-│   └── validations/              # Zod schemas
-├── hooks/                        # use-shifts, use-realtime-schedule, etc.
+│   ├── domain/                   # Pure domain logic (fairness, overtime, shift-policy, swap-workflow)
+│   └── swap-config.ts            # Manager approval toggle
+├── hooks/                        # use-shifts, use-realtime-schedule, use-table-pagination, etc.
 ├── prisma/
 │   ├── schema.prisma
 │   └── seed.ts
-└── config/
+└── config/                       # schedule (cutoff), env validation
 ```
 
 **Conventions:** Timestamps in UTC; overnight shifts use `startsAt`/`endsAt` (e.g. 22:00 → 06:00 next day); `@/` path alias.
@@ -98,6 +101,13 @@ shiftsync/
 - Audit trail: admin-only; no retention policy.
 - Consecutive-day calculation uses last 14 days of assignments.
 - Pusher required for real-time; falls back to manual refresh if unconfigured.
+
+---
+
+## Development
+
+- **Tests:** `npm test` (Jest; domain logic, components, API routes). Use `npm run test:api` or `npm run test:components` for subsets.
+- **Env:** See `.env.example`. `DATABASE_URL` and `AUTH_SECRET` (or `NEXTAUTH_SECRET`) are required; Pusher vars optional.
 
 ---
 
