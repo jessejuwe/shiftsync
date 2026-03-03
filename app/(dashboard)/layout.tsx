@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "@/components/features/notifications/notification-center";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   CalendarDays,
   FileText,
@@ -46,7 +47,7 @@ export default function DashboardLayout({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex items-center justify-between py-3">
+          <div className="flex items-center justify-between gap-2 py-3">
             <Image
               src="/assets/logo.png"
               alt="ShiftSync"
@@ -55,7 +56,10 @@ export default function DashboardLayout({
               className="h-8 w-auto object-contain"
               priority
             />
-            <NotificationCenter />
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <NotificationCenter />
+            </div>
           </div>
         </SidebarHeader>
         <SidebarContent>
