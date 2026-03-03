@@ -9,6 +9,7 @@ import {
   type SwapRequestedPayload,
   type SwapApprovedPayload,
   type AssignmentConflictPayload,
+  type NotificationCreatedPayload,
 } from "@/lib/pusher-events";
 
 // =============================================================================
@@ -20,6 +21,7 @@ export interface RealtimeNotificationCallbacks {
   onSwapRequested?: (payload: SwapRequestedPayload) => void;
   onSwapApproved?: (payload: SwapApprovedPayload) => void;
   onAssignmentConflict?: (payload: AssignmentConflictPayload) => void;
+  onNotificationCreated?: (payload: NotificationCreatedPayload) => void;
 }
 
 export interface UseRealtimeNotificationsOptions {
@@ -99,6 +101,13 @@ export function useRealtimeNotifications({
       PUSHER_EVENTS.ASSIGNMENT_CONFLICT,
       (payload: AssignmentConflictPayload) => {
         callbacksRef.current.onAssignmentConflict?.(payload);
+      }
+    );
+
+    userChannel.bind(
+      PUSHER_EVENTS.NOTIFICATION_CREATED,
+      (payload: NotificationCreatedPayload) => {
+        callbacksRef.current.onNotificationCreated?.(payload);
       }
     );
 
