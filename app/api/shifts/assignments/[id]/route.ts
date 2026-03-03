@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AuditLogAction } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { broadcastShiftUnassigned } from "@/lib/pusher-events";
@@ -106,7 +107,7 @@ export async function DELETE(
       await tx.auditLog.create({
         data: {
           userId: session.user.id,
-          action: "SHIFT_UNASSIGNED",
+          action: AuditLogAction.SHIFT_UNASSIGNED,
           entityType: "ShiftAssignment",
           entityId: assignmentId,
           locationId: assignment.shift.locationId,

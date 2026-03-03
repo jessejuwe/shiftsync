@@ -500,11 +500,12 @@ export async function executeSwap(
   });
 
   // Audit log
+  const { AuditLogAction } = await import("@/generated/prisma/enums");
   await tx.auditLog.createMany({
     data: [
       {
         userId: actorId,
-        action: "SWAP_EXECUTE",
+        action: AuditLogAction.SWAP_EXECUTE,
         entityType: "SwapRequest",
         entityId: swapRequestId,
         changes: {

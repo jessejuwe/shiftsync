@@ -1955,6 +1955,20 @@ export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'J
 export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
+
+/**
+ * Reference to a field of type 'AuditLogAction'
+ */
+export type EnumAuditLogActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AuditLogAction'>
+    
+
+
+/**
+ * Reference to a field of type 'AuditLogAction[]'
+ */
+export type ListEnumAuditLogActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AuditLogAction[]'>
+    
+
 /**
  * Batch Payload for updateMany & deleteMany & createMany
  */

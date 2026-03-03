@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AuditLogAction } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -499,12 +500,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 9. Audit log for 7th-day override
-      if (canOverride7thDay && session?.user?.id) {
+      // 9. Audit log
+      if (session?.user?.id) {
         await tx.auditLog.create({
           data: {
             userId: session.user.id,
-            action: "OVERRIDE_7TH_DAY",
+            action: canOverride7thDay
+              ? AuditLogAction.OVERRIDE_7TH_DAY
+              : AuditLogAction.SHIFT_ASSIGNED,
             entityType: "ShiftAssignment",
             entityId: assignment.id,
             locationId: shift.locationId,
@@ -514,7 +517,9 @@ export async function POST(request: NextRequest) {
                 assignmentId: assignment.id,
                 shiftId,
                 assignedUserId: userId,
-                overrideReason: overrideReason!.trim(),
+                ...(canOverride7thDay && {
+                  overrideReason: overrideReason!.trim(),
+                }),
               },
             },
           },

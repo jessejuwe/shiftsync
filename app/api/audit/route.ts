@@ -9,9 +9,9 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: NextRequest) {
   const session = await auth();
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (role !== "ADMIN") {
+  if (role !== "ADMIN" && role !== "MANAGER") {
     return NextResponse.json(
-      { code: "FORBIDDEN", message: "Admin access required" },
+      { code: "FORBIDDEN", message: "Admin or Manager access required" },
       { status: 403 }
     );
   }
@@ -20,10 +20,12 @@ export async function GET(request: NextRequest) {
   const locationId = searchParams.get("locationId");
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
+  const shiftId = searchParams.get("shiftId");
 
   const where: {
     locationId?: string | null;
     createdAt?: { gte?: Date; lte?: Date };
+    OR?: Array<Record<string, unknown>>;
   } = {};
 
   if (locationId) {
@@ -40,6 +42,26 @@ export async function GET(request: NextRequest) {
       end.setUTCHours(23, 59, 59, 999);
       where.createdAt.lte = end;
     }
+  }
+
+  if (shiftId) {
+    where.OR = [
+      { entityType: "Shift", entityId: shiftId },
+      {
+        entityType: "ShiftAssignment",
+        changes: {
+          path: ["after", "shiftId"],
+          equals: shiftId,
+        },
+      },
+      {
+        entityType: "ShiftAssignment",
+        changes: {
+          path: ["before", "shiftId"],
+          equals: shiftId,
+        },
+      },
+    ];
   }
 
   const logs = await prisma.auditLog.findMany({

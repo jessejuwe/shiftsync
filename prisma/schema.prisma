@@ -48,6 +48,21 @@ enum NotificationPreference {
   IN_APP_AND_EMAIL
 }
 
+enum AuditLogAction {
+  SHIFT_CREATED
+  SHIFT_EDITED
+  SHIFT_PUBLISHED
+  SHIFT_ASSIGNED
+  SHIFT_UNASSIGNED
+  OVERRIDE_7TH_DAY
+  SWAP_REQUEST
+  SWAP_ACCEPT
+  SWAP_REJECT
+  SWAP_APPROVE
+  SWAP_CANCEL
+  SWAP_EXECUTE
+}
+
 // =============================================================================
 // USER & AUTH
 // =============================================================================
@@ -355,10 +370,10 @@ model Notification {
 // =============================================================================
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String?  @map("user_id")
-  action     String
-  entityType String   @map("entity_type") // "Shift", "ShiftAssignment", "User", etc.
+  id         String         @id @default(cuid())
+  userId     String?        @map("user_id")
+  action     AuditLogAction
+  entityType String         @map("entity_type") // "Shift", "ShiftAssignment", "User", etc.
   entityId   String   @map("entity_id")
   changes    Json?    // { before?: {...}, after?: {...} } or action-specific payload
   locationId String?  @map("location_id")

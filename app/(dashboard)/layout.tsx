@@ -118,7 +118,7 @@ export default function DashboardLayout({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
-              {isAdmin && (
+              {(isAdmin || isManager) && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === "/audit"}>
                     <Link href="/audit">

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AuditLogAction } from "@/generated/prisma/enums";
 import type { NotificationType } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -393,7 +394,7 @@ export async function PATCH(
         await tx.auditLog.create({
           data: {
             userId: session.user.id,
-            action: "SHIFT_EDITED",
+            action: AuditLogAction.SHIFT_EDITED,
             entityType: "Shift",
             entityId: id,
             locationId: shift.locationId,

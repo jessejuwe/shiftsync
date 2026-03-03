@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { Download, FileText, ShieldAlert } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -29,6 +31,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronRight } from "lucide-react";
+import { AuditLogAction } from "@/generated/prisma/enums";
 
 interface AuditEntry {
   id: string;
@@ -102,7 +105,23 @@ function ExpandableJson({
   );
 }
 
+const ACTION_CONFIG: Record<AuditLogAction, { label: string }> = {
+  SHIFT_CREATED: { label: "Shift Created" },
+  SHIFT_EDITED: { label: "Shift Edited" },
+  SHIFT_PUBLISHED: { label: "Shift Published" },
+  SHIFT_ASSIGNED: { label: "Shift Assigned" },
+  SHIFT_UNASSIGNED: { label: "Shift Unassigned" },
+  OVERRIDE_7TH_DAY: { label: "7th Day Override" },
+  SWAP_REQUEST: { label: "Swap Requested" },
+  SWAP_ACCEPT: { label: "Swap Accepted" },
+  SWAP_REJECT: { label: "Swap Rejected" },
+  SWAP_APPROVE: { label: "Swap Approved" },
+  SWAP_CANCEL: { label: "Swap Cancelled" },
+  SWAP_EXECUTE: { label: "Swap Executed" },
+};
+
 export function AuditTrailViewer() {
+  const searchParams = useSearchParams();
   const today = new Date();
   const defaultFrom = format(startOfDay(subDays(today, 7)), "yyyy-MM-dd");
   const defaultTo = format(endOfDay(today), "yyyy-MM-dd");
@@ -110,6 +129,14 @@ export function AuditTrailViewer() {
   const [locationId, setLocationId] = useState<string>("");
   const [dateFrom, setDateFrom] = useState(defaultFrom);
   const [dateTo, setDateTo] = useState(defaultTo);
+  const [shiftId, setShiftId] = useState<string>(
+    () => searchParams.get("shiftId") ?? "",
+  );
+
+  useEffect(() => {
+    const next = searchParams.get("shiftId") ?? "";
+    setShiftId(next);
+  }, [searchParams]);
 
   const { data: locationsData } = useQuery({
     queryKey: ["locations"],
@@ -121,12 +148,13 @@ export function AuditTrailViewer() {
   });
 
   const { data, isLoading, error, isError } = useQuery({
-    queryKey: ["audit", locationId, dateFrom, dateTo],
+    queryKey: ["audit", locationId, dateFrom, dateTo, shiftId],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (locationId) params.set("locationId", locationId);
       params.set("dateFrom", dateFrom);
       params.set("dateTo", dateTo);
+      if (shiftId) params.set("shiftId", shiftId);
       const res = await fetch(`/api/audit?${params}`);
       if (res.status === 403) {
         throw new Error("FORBIDDEN");
@@ -166,7 +194,7 @@ export function AuditTrailViewer() {
           <div className="text-center">
             <h3 className="font-semibold">Admin access required</h3>
             <p className="text-muted-foreground text-sm">
-              Only administrators can view the audit trail.
+              Admin or Manager access required to view the audit trail.
             </p>
           </div>
         </CardContent>
@@ -199,7 +227,10 @@ export function AuditTrailViewer() {
               value={locationId || "all"}
               onValueChange={(v) => setLocationId(v === "all" ? "" : v)}
             >
-              <SelectTrigger id="location" className="w-full min-w-0 sm:w-[200px]">
+              <SelectTrigger
+                id="location"
+                className="w-full min-w-0 sm:w-[200px]"
+              >
                 <SelectValue placeholder="All locations" />
               </SelectTrigger>
               <SelectContent>
@@ -232,6 +263,17 @@ export function AuditTrailViewer() {
               className="w-full min-w-0 sm:w-[160px]"
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="shiftId">Shift ID</Label>
+            <Input
+              id="shiftId"
+              type="text"
+              placeholder="Filter by shift"
+              value={shiftId}
+              onChange={(e) => setShiftId(e.target.value)}
+              className="w-full min-w-0 sm:w-[180px] font-mono text-xs"
+            />
+          </div>
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="mr-2 size-4" />
             Export JSON
@@ -254,65 +296,74 @@ export function AuditTrailViewer() {
             </p>
           ) : (
             <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Actor</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Entity</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="min-w-[120px]">
-                    Before / After
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {entries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="whitespace-nowrap text-xs">
-                      {format(new Date(entry.timestamp), "MMM d, yyyy HH:mm")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {entry.actorName ??
-                          entry.actorEmail ??
-                          entry.actorId ??
-                          "—"}
-                      </div>
-                      {entry.actorEmail && (
-                        <div className="text-muted-foreground text-xs">
-                          {entry.actorEmail}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium">
-                        {entry.action}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-muted-foreground text-xs">
-                        {entry.entityType}
-                      </span>
-                      <span className="ml-1 font-mono text-xs">
-                        {entry.entityId.slice(0, 8)}…
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {entry.locationName ?? "—"}
-                    </TableCell>
-                    <TableCell>
-                      <ExpandableJson
-                        before={entry.before}
-                        after={entry.after}
-                        changes={entry.changes}
-                      />
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Timestamp</TableHead>
+                    <TableHead>Actor</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Entity</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead className="min-w-[120px]">
+                      Before / After
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {entries.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="whitespace-nowrap text-xs">
+                        {format(new Date(entry.timestamp), "MMM d, yyyy HH:mm")}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {entry.actorName ??
+                            entry.actorEmail ??
+                            entry.actorId ??
+                            "—"}
+                        </div>
+                        {entry.actorEmail && (
+                          <div className="text-muted-foreground text-xs">
+                            {entry.actorEmail}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          action={
+                            entry.action in ACTION_CONFIG
+                              ? (entry.action as AuditLogAction)
+                              : undefined
+                          }
+                        >
+                          {entry.action in ACTION_CONFIG
+                            ? ACTION_CONFIG[entry.action as AuditLogAction]
+                                .label
+                            : entry.action}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground text-xs">
+                          {entry.entityType}
+                        </span>
+                        <span className="ml-1 font-mono text-xs">
+                          {entry.entityId.slice(0, 8)}…
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {entry.locationName ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <ExpandableJson
+                          before={entry.before}
+                          after={entry.after}
+                          changes={entry.changes}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

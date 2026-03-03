@@ -52,6 +52,33 @@ const badgeVariants = cva(
         day: "bg-cyan-100 text-cyan-700 border border-cyan-200 font-normal dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30",
       },
 
+      action: {
+        SHIFT_CREATED:
+          "bg-emerald-100 text-emerald-700 border border-emerald-200 font-normal dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/20",
+        SHIFT_EDITED:
+          "bg-sky-100 text-sky-700 border border-sky-200 font-normal dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/20",
+        SHIFT_PUBLISHED:
+          "bg-blue-100 text-blue-700 border border-blue-200 font-normal dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/20",
+        SHIFT_ASSIGNED:
+          "bg-green-100 text-green-700 border border-green-200 font-normal dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/20",
+        SHIFT_UNASSIGNED:
+          "bg-red-100 text-red-700 border border-red-200 font-normal dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/20",
+        OVERRIDE_7TH_DAY:
+          "bg-amber-100 text-amber-700 border border-amber-200 font-normal dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/20",
+        SWAP_REQUEST:
+          "bg-violet-100 text-violet-700 border border-violet-200 font-normal dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/20",
+        SWAP_ACCEPT:
+          "bg-teal-100 text-teal-700 border border-teal-200 font-normal dark:bg-teal-500/15 dark:text-teal-300 dark:border-teal-500/20",
+        SWAP_REJECT:
+          "bg-rose-100 text-rose-700 border border-rose-200 font-normal dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/20",
+        SWAP_APPROVE:
+          "bg-green-100 text-green-700 border border-green-200 font-normal dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/20",
+        SWAP_CANCEL:
+          "bg-gray-100 text-gray-700 border border-gray-200 font-normal dark:bg-gray-500/15 dark:text-gray-300 dark:border-gray-500/20",
+        SWAP_EXECUTE:
+          "bg-purple-100 text-purple-700 border border-purple-200 font-normal dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/20",
+      },
+
       role: {
         manager:
           "bg-purple-100 text-purple-700 border border-purple-200 font-normal dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/20",
@@ -70,6 +97,7 @@ function Badge({
   status,
   swap,
   tag,
+  action,
   role,
   asChild = false,
   ...props
@@ -86,9 +114,10 @@ function Badge({
       data-status={status}
       data-swap={swap}
       data-tag={tag}
+      data-action={action}
       data-role={role}
       className={cn(
-        badgeVariants({ variant, status, swap, tag, role }),
+        badgeVariants({ variant, status, swap, tag, action, role }),
         className,
       )}
       {...props}

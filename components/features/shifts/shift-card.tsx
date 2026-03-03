@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { format } from "date-fns";
 import {
   X,
@@ -11,6 +12,7 @@ import {
   LogOut,
   Send,
   EyeOff,
+  History,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -247,6 +249,24 @@ export function ShiftCard({
                 <TooltipContent>
                   {isFull ? "Shift is full" : "Assign staff to this shift"}
                 </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="size-8 p-0"
+                    asChild
+                  >
+                    <Link
+                      href={`/audit?shiftId=${shift.id}`}
+                      aria-label="View shift history"
+                    >
+                      <History className="size-3.5" />
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>View shift history</TooltipContent>
               </Tooltip>
             </>
           )}

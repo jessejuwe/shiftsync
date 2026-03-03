@@ -52,3 +52,21 @@ export const NotificationPreference = {
 } as const
 
 export type NotificationPreference = (typeof NotificationPreference)[keyof typeof NotificationPreference]
+
+
+export const AuditLogAction = {
+  SHIFT_CREATED: 'SHIFT_CREATED',
+  SHIFT_EDITED: 'SHIFT_EDITED',
+  SHIFT_PUBLISHED: 'SHIFT_PUBLISHED',
+  SHIFT_ASSIGNED: 'SHIFT_ASSIGNED',
+  SHIFT_UNASSIGNED: 'SHIFT_UNASSIGNED',
+  OVERRIDE_7TH_DAY: 'OVERRIDE_7TH_DAY',
+  SWAP_REQUEST: 'SWAP_REQUEST',
+  SWAP_ACCEPT: 'SWAP_ACCEPT',
+  SWAP_REJECT: 'SWAP_REJECT',
+  SWAP_APPROVE: 'SWAP_APPROVE',
+  SWAP_CANCEL: 'SWAP_CANCEL',
+  SWAP_EXECUTE: 'SWAP_EXECUTE'
+} as const
+
+export type AuditLogAction = (typeof AuditLogAction)[keyof typeof AuditLogAction]

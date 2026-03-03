@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AuditLogAction } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return tx.shift.create({
+      const created = await tx.shift.create({
         data: {
           locationId,
           startsAt: startsAtDate,
@@ -99,6 +100,31 @@ export async function POST(request: NextRequest) {
           requiredSkills: { include: { skill: { select: { id: true, name: true } } } },
         },
       });
+
+      if (session?.user?.id) {
+        await tx.auditLog.create({
+          data: {
+            userId: session.user.id,
+            action: AuditLogAction.SHIFT_CREATED,
+            entityType: "Shift",
+            entityId: created.id,
+            locationId: created.locationId,
+            changes: {
+              before: null,
+              after: {
+                startsAt: created.startsAt.toISOString(),
+                endsAt: created.endsAt.toISOString(),
+                title: created.title,
+                notes: created.notes,
+                headcount: created.headcount,
+                requiredSkillIds: created.requiredSkills.map((s) => s.skill.id),
+              },
+            },
+          },
+        });
+      }
+
+      return created;
     });
 
     return NextResponse.json(
