@@ -2,8 +2,14 @@
 
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bell, Mail } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Bell, Mail, Settings2 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getQueryClient } from "@/app/get-query-client";
@@ -36,7 +42,9 @@ export function NotificationPreferencesForm() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "notifications"] });
+      queryClient.invalidateQueries({
+        queryKey: ["settings", "notifications"],
+      });
       toast.success("Notification preferences updated");
     },
     onError: (err: Error) => {
@@ -44,12 +52,16 @@ export function NotificationPreferencesForm() {
     },
   });
 
-  const value = (data?.notificationPreference ?? "IN_APP_ONLY") as NotificationPreference;
+  const value = (data?.notificationPreference ??
+    "IN_APP_ONLY") as NotificationPreference;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notification preferences</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Settings2 className="size-5" />
+          Notification preferences
+        </CardTitle>
         <CardDescription>
           Choose how you want to receive notifications. In-app notifications
           always appear in the notification center.
