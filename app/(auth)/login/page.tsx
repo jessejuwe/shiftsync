@@ -1,3 +1,4 @@
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -24,7 +25,15 @@ export default async function LoginPage({
 
   return (
     <Card className="w-full max-w-md">
-      <CardHeader>
+      <CardHeader className="flex flex-col items-center text-center">
+        <Image
+          src="/assets/logo.png"
+          alt="ShiftSync"
+          width={140}
+          height={40}
+          className="mb-4 h-10 w-auto object-contain"
+          priority
+        />
         <CardTitle>Sign in to ShiftSync</CardTitle>
         <CardDescription>
           Enter your email and password to access your account
